@@ -1,4 +1,9 @@
 Hello world
 
 Bananas
+<<<<<<< HEAD
 making changes by Tamara
+=======
+
+42
+>>>>>>> c7f70a2c1b81369f7e9335683f952db3011b5235
