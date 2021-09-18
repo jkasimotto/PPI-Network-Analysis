@@ -1,6 +1,6 @@
 import gzip
 
-PATH_TO_PROJECT = "C:/users/jotto/projects/python/math3888"
+PATH_TO_PROJECT = "..\\"
 PATH_TO_DATA = f"{PATH_TO_PROJECT}/data"
 PATH_TO_GRAPHS = f"{PATH_TO_DATA}/graphs"
 PATH_TO_ZIPPED = f"{PATH_TO_DATA}/zipped"
