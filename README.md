@@ -1,3 +1,3 @@
-Hi World
+Our collaboration hub for network analysis in the Math3888 project.
 
-Hello this is Tamara
+Each team member has a notebook with access to a shared library of useful functions and datasets.
