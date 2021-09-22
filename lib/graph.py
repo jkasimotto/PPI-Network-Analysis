@@ -16,7 +16,7 @@ def read_STRING():
 
 
 def read_inviable_proteins():
-    lines = lib.files.read_filelines(lib.files.make_filepath_to_data('essential_proteins.csv'))
+    lines = lib.files.read_filelines(lib.files.make_filepath_to_data('inviable_proteins.csv'))
     lines = list(filter(None, lines))  # Remove empty lines
     lines = [line.split(',') for line in lines]  # Split into SGD, systemic name, common name, _, _
     systemic_names = [line[1].replace('"', '') for line in lines]
