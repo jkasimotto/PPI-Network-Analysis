@@ -1,9 +1,19 @@
 import itertools
+import math
 
 import markov_clustering as mcl
 import networkx as nx
 
 import lib.files
+
+
+class MCLData:
+    def __init__(self, matrix, result, sparse_clusters, semantic_clusters, modularity=None):
+        self.matrix = matrix
+        self.result = result
+        self.sparse_clusters = sparse_clusters  # Obtained from mcl.get_clusters(result)
+        self.clusters = semantic_clusters  # Obtained from mcl_semantic_clusters(network, sparse_clusters)
+        self.modularity = None
 
 
 def read_csv(filepath):
@@ -32,6 +42,10 @@ def read_yhtp2008():
             clusters.append(set())
         clusters[-1].add(orf)
     return clusters
+
+
+def intersection(cluster1, cluster2):
+    return list(set(cluster1).intersection(set(cluster2)))
 
 
 def clusters_with_protein(clusters, protein):
@@ -114,10 +128,40 @@ def write_to_file(filepath, clusters):
         f.writelines(lines)
 
 
-class MCLData:
-    def __init__(self, matrix, result, sparse_clusters, semantic_clusters, modularity=None):
-        self.matrix = matrix
-        self.result = result
-        self.sparse_clusters = sparse_clusters  # Obtained from mcl.get_clusters(result)
-        self.clusters = semantic_clusters  # Obtained from mcl_semantic_clusters(network, sparse_clusters)
-        self.modularity = None
+def accuracy(sensitivity, ppv):
+    return math.sqrt(sensitivity * ppv)
+
+
+def sensitivity(complexes, contingency_table):
+    """
+    :param contingency_table: A table with entries t(i,j) representing the number of shared proteins between complex i and cluster j
+    """
+    rows = range(len(contingency_table))
+    cols = range(len(contingency_table[0]))
+    # The sum of maximum match for each complex
+    numerator = sum(max(contingency_table[i]) for i in rows)
+    # Divided by the length of each complex
+    denominator = (sum(len(complexes[i]) for i in rows))
+    return numerator / denominator
+
+
+def positive_predictive_value(contingency_table):
+    rows = range(len(contingency_table))
+    cols = range(len(contingency_table[0]))
+    # The sum of maximum match for each cluster
+    numerator = sum(max(contingency_table[i][j] for i in rows) for j in cols)
+    # The sum of the numbers of all matches
+    denominator = sum(sum(contingency_table[i][j] for i in rows) for j in cols)
+    return numerator / denominator
+
+
+def contingency_table(complexes, clusters):
+    """
+    :param complexes:  Our validation clusters. These are only protein complexes however and don't have functional modules.
+    :param clusters: Our clusters.
+    :return:
+    """
+    return [
+        [len(intersection(cluster, complex)) for cluster in clusters]
+        for complex in complexes
+    ]

@@ -15,8 +15,8 @@ def read_STRING():
     return nx.read_weighted_edgelist(lib.files.make_filepath_to_networks('4932.protein.links.v11.5.txt'))
 
 
-def read_edgelist(filepath):
-    return nx.read_edgelist(filepath)
+def read_weighted_edgelist(filepath):
+    return nx.read_weighted_edgelist(filepath)
 
 
 def read_inviable_proteins(as_graph=False):
