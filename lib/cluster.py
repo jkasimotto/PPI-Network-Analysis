@@ -6,39 +6,63 @@ import networkx as nx
 import lib.files
 
 
+def read_csv(filepath):
+    lines = lib.files.read_filelines(filepath)
+
+    clusters = []
+    for line in lines:
+        cluster_id, protein = line.split(',')
+        cluster_id = int(cluster_id)
+        if len(clusters) == cluster_id:
+            clusters.append(set())
+        clusters[-1].add(protein)
+    return clusters
+
+
 def read_yhtp2008():
     """
-    Read the csv file into a list of sets representing protein complexes verified experimentally.
+    Read the csv file into a list of sets representing protein clusters verified experimentally.
     """
-    lines = lib.files.read_filelines(lib.files.make_filepath_to_data("yhtp2008_complex.csv"))
-    complexes = []
+    lines = lib.files.read_filelines(lib.files.make_filepath_to_clusters("yhtp2008_cluster.csv"))
+    clusters = []
     for line in lines:
         cid, orf, _ = line.split(',')
-        # The appearance of a new number in the cid column indicates a new complex.
+        # The appearance of a new number in the cid column indicates a new cluster.
         if cid:
-            complexes.append(set())
-        complexes[-1].add(orf)
-    return complexes
+            clusters.append(set())
+        clusters[-1].add(orf)
+    return clusters
 
 
-def get_complexes_containing_protein(complexes, protein):
-    return [complex for complex in complexes if protein in complex]
+def clusters_with_protein(clusters, protein):
+    return [cluster for cluster in clusters if protein in cluster]
 
 
-def get_complexes_size_sequence(complexes):
-    return sorted([len(complex) for complex in complexes])
+def lengths(clusters):
+    return sorted([len(cluster) for cluster in clusters])
 
 
-def count_complexes_containing_protein(complexes, orf):
-    return len(get_complexes_containing_protein(complexes, orf))
+def number_clusters_with_protein(clusters, orf):
+    return len(clusters_with_protein(clusters, orf))
 
 
-def get_proteins_in_complexes(complexes):
-    return list(itertools.chain.from_iterable(complexes))
+def proteins(clusters):
+    return list(itertools.chain.from_iterable(clusters))
+
+
+def neighbourhood_clusters(clusters, shortest_path_lengths, path_length=1):
+    # Remove node far away
+    local_clusters = [[node for node in cluster if shortest_path_lengths[node] <= path_length] for cluster in clusters]
+    # Make non-overlapping
+    local_clusters = lib.cluster.non_overlapping(local_clusters)
+    # Sort from smallest to largest
+    local_clusters = sorted(local_clusters, key=len)
+    # Remove empty clusters
+    return list(filter(None, local_clusters))
 
 
 def non_overlapping(old_clusters):
-    """Very inefficient"""
+    """Very inefficient. TODO: Write 1-3 tests."""
     # Keep a list of all nodes and the index of their largest cluster
     old_clusters = sorted(old_clusters, key=len, reverse=True)  # Largest to smallest
     new_clusters = []
@@ -55,9 +79,8 @@ def non_overlapping(old_clusters):
     return new_clusters
 
 
-def remove_nodes_far_from_source(network, cluster, source, path_length):
-    shortest_paths = nx.single_source_shortest_path_length(network, source)
-    return [node for node in cluster if shortest_paths[node] <= path_length]
+def remove_clusters_of_size_lte(clusters, size=3):
+    return [cluster for cluster in clusters if len(cluster) > size]
 
 
 def run_mcl(graph, inflation=2):
@@ -70,7 +93,7 @@ def run_mcl(graph, inflation=2):
     return MCLData(matrix, result, clusters, clusters_semantic, modularity)
 
 
-def run_mcl_write_to_file(graph, filepath, inflation=2):
+def run_mcl_and_write_to_file(graph, filepath, inflation=2):
     mcl_data = run_mcl(graph, inflation)
     write_to_file(filepath, mcl_data.clusters)
 
@@ -80,13 +103,6 @@ def mcl_semantic_clusters(graph, clusters):
     nodes = list(graph.nodes())
     semantic_clusters = [[nodes[index] for index in cluster] for cluster in clusters]
     return semantic_clusters
-
-
-def neighbourhood_clusters(clusters, shortest_path_lengths, path_length=1):
-    local_clusters = [[node for node in cluster if shortest_path_lengths[node] <= path_length] for cluster in clusters]
-    local_clusters = lib.cluster.non_overlapping(local_clusters)
-    local_clusters = sorted(local_clusters, key=len)
-    return list(filter(None, local_clusters))
 
 
 def write_to_file(filepath, clusters):

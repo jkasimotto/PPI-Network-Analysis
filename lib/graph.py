@@ -12,7 +12,11 @@ def read_graph(filename):
 
 
 def read_STRING():
-    return nx.read_weighted_edgelist(lib.files.make_filepath_to_data('4932.protein.links.v11.5.txt'))
+    return nx.read_weighted_edgelist(lib.files.make_filepath_to_networks('4932.protein.links.v11.5.txt'))
+
+
+def read_edgelist(filepath):
+    return nx.read_edgelist(filepath)
 
 
 def read_inviable_proteins(as_graph=False):
@@ -27,12 +31,8 @@ def read_inviable_proteins(as_graph=False):
         return nodes
 
 
-def write_edgelist(filepath, network):
-    pass
-    return None
-    # lines = [f"{edge[0]} {edge[1]}"]
-    # with open(filepath, 'w') as f:
-    #     f.writelines(lines)
+def write_weighted_edgelist(network, filepath):
+    nx.write_weighted_edgelist(network, path=filepath, delimiter=' ')
 
 
 def make_from_nodes(nodes):
