@@ -70,6 +70,11 @@ def run_mcl(graph, inflation=2):
     return MCLData(matrix, result, clusters, clusters_semantic, modularity)
 
 
+def run_mcl_write_to_file(graph, filepath, inflation=2):
+    mcl_data = run_mcl(graph, inflation)
+    write_to_file(filepath, mcl_data.clusters)
+
+
 def mcl_semantic_clusters(graph, clusters):
     # Convert clusters of indexes back to clusters of systemic names.
     nodes = list(graph.nodes())
@@ -82,6 +87,7 @@ def neighbourhood_clusters(clusters, shortest_path_lengths, path_length=1):
     local_clusters = lib.cluster.non_overlapping(local_clusters)
     local_clusters = sorted(local_clusters, key=len)
     return list(filter(None, local_clusters))
+
 
 def write_to_file(filepath, clusters):
     lines = []
@@ -99,4 +105,3 @@ class MCLData:
         self.sparse_clusters = sparse_clusters  # Obtained from mcl.get_clusters(result)
         self.clusters = semantic_clusters  # Obtained from mcl_semantic_clusters(network, sparse_clusters)
         self.modularity = None
-

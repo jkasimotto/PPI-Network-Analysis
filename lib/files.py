@@ -3,16 +3,9 @@ import gzip
 PATH_TO_PROJECT = "..\\"
 PATH_TO_DATA = f"{PATH_TO_PROJECT}/data"
 PATH_TO_GRAPHS = f"{PATH_TO_DATA}/graphs"
-PATH_TO_ZIPPED = f"{PATH_TO_DATA}/zipped"
-PATH_TO_UNZIPPED = f"{PATH_TO_DATA}/unzipped"
-
-
-def make_zipped_file_path(file_name):
-    return f"{PATH_TO_ZIPPED}/{file_name}.txt.gz"
-
-
-def make_unzipped_filepath(file_name):
-    return f"{PATH_TO_UNZIPPED}/{file_name}.txt"
+PATH_TO_NETWORKS = f"{PATH_TO_DATA}/networks"
+PATH_TO_CLUSTERS = f"{PATH_TO_DATA}/clusters"
+PATH_TO_MCL_CLUSTERS = f"{PATH_TO_CLUSTERS}/mcl"
 
 
 def make_filepath_to_data(file_name):
@@ -21,6 +14,18 @@ def make_filepath_to_data(file_name):
 
 def make_filepath_to_graphs(file_name):
     return f"{PATH_TO_GRAPHS}/{file_name}"
+
+
+def make_filepath_to_networks(file_name):
+    return f"{PATH_TO_NETWORKS}/{file_name}"
+
+
+def make_filepath_to_clusters(file_name):
+    return f"{PATH_TO_CLUSTERS}/{file_name}"
+
+
+def make_filepath_to_mcl_clusters(file_name):
+    return f"{PATH_TO_MCL_CLUSTERS}/{file_name}"
 
 
 def read_zipped_filelines(filepath):

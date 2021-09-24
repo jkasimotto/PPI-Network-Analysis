@@ -15,13 +15,16 @@ def read_STRING():
     return nx.read_weighted_edgelist(lib.files.make_filepath_to_data('4932.protein.links.v11.5.txt'))
 
 
-def read_inviable_proteins():
+def read_inviable_proteins(as_graph=False):
     lines = lib.files.read_filelines(lib.files.make_filepath_to_data('inviable_proteins.csv'))
     lines = list(filter(None, lines))  # Remove empty lines
     lines = [line.split(',') for line in lines]  # Split into SGD, systemic name, common name, _, _
     systemic_names = [line[1].replace('"', '') for line in lines]
     nodes = [f"4932.{name}" for name in systemic_names]  # Add organism name to systemic name to match STRING
-    return make_from_nodes(nodes)  # Return systemic name
+    if as_graph:
+        return make_from_nodes(nodes)  # Return systemic name
+    else:
+        return nodes
 
 
 def write_edgelist(filepath, network):
@@ -70,6 +73,16 @@ def remove_edges_below_threshold(graph, threshold):
 def remove_nodes_with_degree_lte(graph, k):
     nodes_to_remove = [node for node in graph.nodes if get_degree(graph, node) <= k]
     graph.remove_nodes_from(nodes_to_remove)
+    return graph
+
+
+def remove_nodes_from_subgraph(graph, subgraph):
+    graph.remove_nodes_from(subgraph.nodes())
+    return graph
+
+
+def remove_nodes_from_list(graph, nodes):
+    graph.remove_nodes_from(nodes)
     return graph
 
 
