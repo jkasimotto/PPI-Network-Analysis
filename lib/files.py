@@ -50,7 +50,3 @@ def preprocess_txt_gz_file(filepath):
     # lines = read_zipped_filelines(filepath)
     # lines = lines[1:]  # Remove header
     # write_lines_to_file(make_unzipped_filepath(file_name), lines)
-
-
-def read_data(file_name):
-    return read_filelines(make_filepath_for_nb(file_name))
