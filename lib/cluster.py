@@ -159,7 +159,7 @@ def contingency_table(complexes, clusters):
     """
     :param complexes:  Our validation clusters. These are only protein complexes however and don't have functional modules.
     :param clusters: Our clusters.
-    :return:
+    :return: A matrix with entries t(i, j) representing the number of nodes in complex i and cluster j
     """
     return [
         [len(intersection(cluster, complex)) for cluster in clusters]
