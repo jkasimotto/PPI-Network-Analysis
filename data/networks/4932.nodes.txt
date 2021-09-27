@@ -1,0 +1,12 @@
+This is the Yeast PPI network downloaded from STRING.
+
+name: The systemic name of the protein as in STRING
+degree:
+dist:
+betweeness_centrality:
+eigenvector_centrality:
+degree_centrality:
+num_bridging: #conn_components_after_knockout - #conn_components_before_knockout
+avg_deg_inc_after_ko: mean_dist_after_knockout - mean_dist_before_knockout
+is_inviable:
+is_involved_in_mp: is involved in mitochondrial protease
