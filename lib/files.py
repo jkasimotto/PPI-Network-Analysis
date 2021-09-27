@@ -1,11 +1,21 @@
 import gzip
+import os
 
-PATH_TO_PROJECT = "..\\"
+
+def make_filepath_to_src():
+    cwd = os.getcwd()
+    index = cwd.index('math3888')
+    return cwd[:index + len('math3888')]
+
+
+# PATH_TO_PROJECT = "..\\"
+PATH_TO_PROJECT = make_filepath_to_src()  # This should make a filepath to the root directory no matter where the file is.
 PATH_TO_DATA = f"{PATH_TO_PROJECT}/data"
 PATH_TO_GRAPHS = f"{PATH_TO_DATA}/graphs"
 PATH_TO_NETWORKS = f"{PATH_TO_DATA}/networks"
 PATH_TO_CLUSTERS = f"{PATH_TO_DATA}/clusters"
 PATH_TO_MCL_CLUSTERS = f"{PATH_TO_CLUSTERS}/mcl"
+PATH_TO_TABLES = f"{PATH_TO_DATA}/tables"
 
 
 def make_filepath_to_data(file_name):
@@ -26,6 +36,10 @@ def make_filepath_to_clusters(file_name):
 
 def make_filepath_to_mcl_clusters(file_name):
     return f"{PATH_TO_MCL_CLUSTERS}/{file_name}"
+
+
+def path_to_tables(file_name):
+    return f"{PATH_TO_TABLES}/{file_name}"
 
 
 def read_zipped_filelines(filepath):

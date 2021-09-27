@@ -30,3 +30,19 @@ def bridging_centrality(graph,
 
     # Output
     return bridging_cent
+
+
+def betweeness(graph):
+    """
+
+    :param graph:
+    :return: A dict with keys of node-names and values of centralities.
+    """
+    return nx.algorithms.centrality.betweenness_centrality(graph)
+
+
+def eigenvector(graph):
+    return nx.algorithms.centrality.eigenvector_centrality(graph)
+
+def degree(graph):
+    return nx.algorithms.centrality.degree_centrality(graph)
