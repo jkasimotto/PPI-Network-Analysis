@@ -252,6 +252,8 @@ def generate_dataframe(network, clusters):
     :param clusters: List of nodes belonging to each cluster.
     :return: pandas Dataframe
     """
+    
+    # billy_metric = []
 
     # The features to be generated.
     ids = []
@@ -273,6 +275,10 @@ def generate_dataframe(network, clusters):
 
     # Add the data
     for id, cluster in enumerate(clusters):
+        
+        # billy_metric.append(calculate_metric())
+        
+        
         # Save the cluster as a subgraph to apply networkx algorithms.
         cluster = network.subgraph(cluster)
         # Save values as lists to reuse below.
@@ -299,6 +305,7 @@ def generate_dataframe(network, clusters):
     # Make sure the names match the data in order.
     return pd.DataFrame.from_records(
         data=list(zip(
+            # billy_metric,
             ids,
             size,
             icp55_shorpl,
@@ -313,6 +320,7 @@ def generate_dataframe(network, clusters):
             avg_outer_deg
         )),
         columns=[
+            # 'Bilbo',
             'cluster',
             'size',
             'icp55_shorpl',
