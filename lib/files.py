@@ -8,8 +8,8 @@ def make_filepath_to_src():
     return cwd[:index + len('math3888')]
 
 
-# PATH_TO_PROJECT = "..\\"
-PATH_TO_PROJECT = make_filepath_to_src()  # This should make a filepath to the root directory no matter where the file is.
+PATH_TO_PROJECT = "..\\"
+#PATH_TO_PROJECT = make_filepath_to_src()  # This should make a filepath to the root directory no matter where the file is.
 PATH_TO_DATA = f"{PATH_TO_PROJECT}/data"
 PATH_TO_GRAPHS = f"{PATH_TO_DATA}/graphs"
 PATH_TO_NETWORKS = f"{PATH_TO_DATA}/networks"
