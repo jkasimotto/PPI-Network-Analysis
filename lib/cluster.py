@@ -333,3 +333,35 @@ def generate_and_save_dataframe(network, clusters, filepath):
     df = generate_dataframe(network, clusters)
     df.to_csv(filepath)
 
+
+def billy_method(network, clusters):
+
+    proteins = []
+    protein_degrees = []
+    protein_eigenvector_centralities_within_cluster = []
+
+    for i, cluster in enumerate(clusters):
+
+        # Change the cluster variable from a list to a subgraph to use networkx functions such as cluster.degree()
+        cluster = network.subgraph(cluster)
+
+        # Compute the eigenvector centralities for the cluster.
+        eigenvector = nx.eigenvector_centrality(cluster)
+
+        for protein in cluster:
+            proteins.append(protein)
+            protein_degrees.append(cluster.degree()[protein])
+            protein_eigenvector_centralities_within_cluster.append(eigenvector[protein])
+
+    return pd.DataFrame.from_records(
+        list(zip(
+            proteins,
+            protein_degrees,
+            protein_eigenvector_centralities_within_cluster
+        )),
+        columns=[
+            'protein',
+            'degree',
+            'eigenvector'
+        ]
+    )
