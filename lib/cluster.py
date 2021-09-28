@@ -3,8 +3,10 @@ import math
 
 import markov_clustering as mcl
 import networkx as nx
+import numpy as np
 import pandas as pd
 
+import lib.constants
 import lib.files
 
 
@@ -13,6 +15,8 @@ import lib.files
 def intersection(cluster1, cluster2):
     return list(set(cluster1).intersection(set(cluster2)))
 
+def cluster_idxs_with_protein(clusters, protein):
+    return [i for (i, cluster) in enumerate(clusters) if protein in cluster]
 
 def clusters_with_protein(clusters, protein):
     return [cluster for cluster in clusters if protein in cluster]
@@ -89,7 +93,20 @@ def compute_centralities(cluster_filepath, network, clusters, centrality_functio
             cids.append(cid)
             orfs.append(orf)
             centralities.append(centrality)
-    append_column(cluster_filepath, centrality_name, cids, orfs, centralities)
+    append_dataframe_columns(cluster_filepath, centrality_name, cids, orfs, centralities)
+
+
+def append_average_clustering_coefficient(cluster_df_filepath, network, clusters):
+    cluster_ids = []
+    cluster_avg_clustering = []
+    for cluster_id, cluster in enumerate(clusters):
+        # Change to a subgraph to apply to networkx algorithm.
+        cluster = network.subgraph(cluster)
+        # Add data
+        cluster_ids.append(cluster_id)
+        cluster_avg_clustering.append(nx.average_clustering(cluster))  # Change cluster to a subgraph
+    # Append it to our dataframe.
+    append_dataframe_column(cluster_df_filepath, cluster_ids, 'avg_clust_coeff', cluster_avg_clustering)
 
 
 # VALIDATION MEASURES
@@ -135,11 +152,11 @@ def contingency_table(complexes, clusters):
 
 # MCL
 class MCLData:
-    def __init__(self, matrix, result, sparse_clusters, semantic_clusters, modularity=None):
+    def __init__(self, matrix, result, sparse_clusters, systematic_clusters, modularity=None):
         self.matrix = matrix
         self.result = result
         self.sparse_clusters = sparse_clusters  # Obtained from mcl.get_clusters(result)
-        self.clusters = semantic_clusters  # Obtained from mcl_semantic_clusters(network, sparse_clusters)
+        self.clusters = systematic_clusters  # Obtained from mcl_systematic_clusters(network, sparse_clusters)
         self.modularity = None
 
 
@@ -147,10 +164,12 @@ def run_mcl(graph, inflation=2):
     # Convert to sparse matrix to run the algorithm.
     matrix = nx.to_scipy_sparse_matrix(graph)
     result = mcl.run_mcl(matrix, inflation=inflation)
+    # These clusters use the sparse representation of a node i.e. an index
+    # We want to convert them back to the systematic names of the proteins.
     clusters = mcl.get_clusters(result)
-    clusters_semantic = mcl_semantic_clusters(graph, clusters)
+    clusters_systematic = mcl_systematic_clusters(graph, clusters)
     modularity = mcl.modularity(matrix=result, clusters=clusters)
-    return MCLData(matrix, result, clusters, clusters_semantic, modularity)
+    return MCLData(matrix, result, clusters, clusters_systematic, modularity)
 
 
 def run_mcl_and_write_to_file(graph, filepath, inflation=2):
@@ -158,11 +177,11 @@ def run_mcl_and_write_to_file(graph, filepath, inflation=2):
     write_to_file(filepath, mcl_data.clusters)
 
 
-def mcl_semantic_clusters(graph, clusters):
+def mcl_systematic_clusters(graph, clusters):
     # Convert clusters of indexes back to clusters of systemic names.
     nodes = list(graph.nodes())
-    semantic_clusters = [[nodes[index] for index in cluster] for cluster in clusters]
-    return semantic_clusters
+    systematic_clusters = [[nodes[index] for index in cluster] for cluster in clusters]
+    return systematic_clusters
 
 
 # FILE HANDLING
@@ -180,7 +199,7 @@ def read_csv(filepath, as_df=False):
         return df
 
     clusters = []
-    for cid, orf in list(zip(df['cid'], df['orf'])):
+    for cid, orf in list(zip(df['cluster'], df['protein'])):
         if cid == len(clusters):
             clusters.append([])
         clusters[-1].append(orf)
@@ -203,16 +222,114 @@ def read_yhtp2008():
 
 
 def write_to_file(filepath, clusters):
-    lines = []
+    cluster_ids = []
+    proteins = []
     for i, cluster in enumerate(clusters):
-        for node in cluster:
-            lines.append(f"{i},{node}\n")
-    with open(filepath, "w") as f:
-        f.writelines(lines)
-
-
-def append_column(filepath, column_name, cids, orfs, column_values):
-    df1 = read_csv(filepath, as_df=True)
-    df2 = pd.DataFrame.from_records(zip(cids, orfs, column_values), columns=['cid', 'orf', column_name])
-    df = df1.merge(df2, on=['cid', 'orf'])
+        for protein in cluster:
+            cluster_ids.append(i)
+            proteins.append(protein)
+    df = pd.DataFrame.from_records(list(zip(cluster_ids, proteins)), columns=['cluster', 'protein'])
     df.to_csv(filepath)
+
+
+# DATAFRAMES
+
+def append_dataframe_column(df_filepath, cluster_ids, column_name, column_values):
+    df1 = pd.read_csv(df_filepath, header=0, index_col=0)
+    assert len(cluster_ids) == len(df1)
+    df2 = pd.DataFrame.from_records(zip(cluster_ids, column_values), columns=['cluster', column_name])
+    df = df1.merge(df2, on=['cluster'])
+    df.to_csv(df_filepath)
+
+
+# PLUG AND PLAY
+
+def generate_dataframe(network, clusters):
+    """
+    This function is a plug and play method to take a network + clustering and creating a dataframe with 
+    interesting variables for analysis.
+    :param network: Networkx network - should be connected.
+    :param clusters: List of nodes belonging to each cluster.
+    :return: pandas Dataframe
+    """
+
+    # The features to be generated.
+    ids = []
+    size = []
+    icp55_shorpl = []
+    pim1_shorpl = []
+    # avg_icp55_shorpl = []
+    # avg_pim1_shorpl = []
+    # std_icp55_shorpl = []
+    # std_pim1_shorpl = []
+    avg_clust_coeff = []
+    avg_deg = []
+    avg_inner_deg = []
+    avg_outer_deg = []
+
+    # These are used several times and stored as a variable.
+    icp55_shortest_paths = nx.shortest_path_length(network, lib.constants.ICP55)
+    pim1_shortest_paths = nx.shortest_path_length(network, lib.constants.PIM1)
+
+    # Add the data
+    for id, cluster in enumerate(clusters):
+        # Save the cluster as a subgraph to apply networkx algorithms.
+        cluster = network.subgraph(cluster)
+        # Save values as lists to reuse below.
+        cluster_icp55_shortest_paths = list((icp55_shortest_paths[node] for node in cluster))
+        cluster_pim1_shortest_paths = list((pim1_shortest_paths[node] for node in cluster))
+        degrees = list((network.degree()[node] for node in cluster))
+        degrees_within_cluster = list((cluster.degree()[node] for node in cluster))
+        degrees_out_of_cluster = [network_deg - cluster_deg for (network_deg, cluster_deg) in zip(degrees, degrees_within_cluster)]
+        # Create records
+        ids.append(id)
+        size.append(len(cluster))
+        icp55_shorpl.append(min(cluster_icp55_shortest_paths))
+        pim1_shorpl.append(min(cluster_pim1_shortest_paths))
+        # avg_icp55_shorpl.append(np.mean(cluster_icp55_shortest_paths))
+        # avg_pim1_shorpl.append(np.mean(cluster_pim1_shortest_paths))
+        # std_icp55_shorpl.append(np.std(cluster_icp55_shortest_paths))
+        # std_pim1_shorpl.append(np.std(cluster_pim1_shortest_paths))
+        avg_clust_coeff.append(nx.average_clustering(cluster))
+        avg_deg.append(np.mean(degrees))
+        avg_inner_deg.append(np.mean(degrees_within_cluster))
+        avg_outer_deg.append(np.mean(degrees_out_of_cluster))
+
+    # Return a dataframe of the records.
+    # Make sure the names match the data in order.
+    return pd.DataFrame.from_records(
+        data=list(zip(
+            ids,
+            size,
+            icp55_shorpl,
+            # avg_icp55_shorpl,
+            # std_icp55_shorpl,
+            pim1_shorpl,
+            # avg_pim1_shorpl,
+            # std_pim1_shorpl,
+            avg_clust_coeff,
+            avg_deg,
+            avg_inner_deg,
+            avg_outer_deg
+        )),
+        columns=[
+            'cluster',
+            'size',
+            'icp55_shorpl',
+            # 'icp55_shorpl_mean',
+            # 'icp55_shorpl_std',
+            'pim1_shorpl',
+            # 'pim1_shorpl_mean',
+            # 'pim1_shorpl_std',
+            'avg_clust_coeff',
+            'avg_deg',
+            'avg_inner_deg',
+            'avg_outer_deg'
+        ]
+    )
+
+
+def generate_and_save_dataframe(network, clusters, filepath):
+    df = generate_dataframe(network, clusters)
+    df.to_csv(filepath)
+

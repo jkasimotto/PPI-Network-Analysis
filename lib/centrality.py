@@ -2,7 +2,8 @@ import networkx as nx
 
 
 def bridging_centrality(graph,
-                        betweenness_approx_nodes=False):
+                        betweenness_approx_nodes=False,
+                        betweeness=None):
     """
 
     :param graph: The graph on which bridging centrality will be computed. Needs to be connected.
@@ -10,11 +11,12 @@ def bridging_centrality(graph,
     :return: A dictionary where keys are node names, and values are bridging centrality values for those nodes
     """
     # Calculate betweenness centrality
-    if betweenness_approx_nodes == False:
-        betweeness = nx.betweenness_centrality(graph)
-    else:
-        betweeness = nx.betweenness_centrality(graph,
-                                               k=betweenness_approx_nodes)
+    if betweeness is None:
+        if betweenness_approx_nodes == False:
+            betweeness = nx.betweenness_centrality(graph)
+        else:
+            betweeness = nx.betweenness_centrality(graph,
+                                                   k=betweenness_approx_nodes)
 
     # Calculate bridging coefficient (Hwang et al. 2006)
     bridging_coeff = dict()

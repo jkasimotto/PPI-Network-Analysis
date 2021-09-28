@@ -76,7 +76,7 @@ def network_layers(network, subgraph_args, base=None, ax=None):
     """
 
     :param subgraph_kwargs: A list of [(subgraph, colour)] from background to foreground.
-    :param base: The base graph s.t. only subgraphs of will be plotted.
+    :param base: The base graph such that only subgraphs of will be plotted.
     :return:
     """
     # So far the only arguments catered for are node_colors
