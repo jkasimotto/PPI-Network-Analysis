@@ -3,9 +3,10 @@ import math
 
 import markov_clustering as mcl
 import networkx as nx
-import numpy as np
 import pandas as pd
 
+import PC2P.PC2P_ParallelMultiprocess
+import PC2P.PC2P_Sequential
 import lib.constants
 import lib.files
 
@@ -15,8 +16,10 @@ import lib.files
 def intersection(cluster1, cluster2):
     return list(set(cluster1).intersection(set(cluster2)))
 
+
 def cluster_idxs_with_protein(clusters, protein):
     return [i for (i, cluster) in enumerate(clusters) if protein in cluster]
+
 
 def clusters_with_protein(clusters, protein):
     return [cluster for cluster in clusters if protein in cluster]
@@ -65,6 +68,14 @@ def non_overlapping(old_clusters):
 
 def remove_clusters_of_size_lte(clusters, size=3):
     return [cluster for cluster in clusters if len(cluster) > size]
+
+
+def get_connected_clusters(clusters):
+    return [cluster for cluster in clusters if nx.is_connected(cluster)]
+
+
+def percentage_connected(clusters):
+    return len(get_connected_clusters(clusters)) / len(clusters)
 
 
 # CENTRALITIES
@@ -161,8 +172,9 @@ class MCLData:
 
 
 def run_mcl(graph, inflation=2):
+    # Set all the edge weights
     # Convert to sparse matrix to run the algorithm.
-    matrix = nx.to_scipy_sparse_matrix(graph)
+    matrix = nx.to_scipy_sparse_matrix(graph, weight=None)
     result = mcl.run_mcl(matrix, inflation=inflation)
     # These clusters use the sparse representation of a node i.e. an index
     # We want to convert them back to the systematic names of the proteins.
@@ -182,6 +194,31 @@ def mcl_systematic_clusters(graph, clusters):
     nodes = list(graph.nodes())
     systematic_clusters = [[nodes[index] for index in cluster] for cluster in clusters]
     return systematic_clusters
+
+
+# PC2P
+def run_pc2p(network):
+    G = network.copy()
+    edge_cut = PC2P.PC2P_Sequential.Find_CNP(G)
+    # PC2P clusters nodes into connected components by removing edges
+    G_copy = G.copy()
+    G_copy.remove_edges_from(edge_cut)
+    # Save predicted clusters in
+    G_cnp_components = list(nx.connected_components(G_copy))
+    G_cnp_components.sort(key=len, reverse=True)
+    return G_cnp_components
+
+
+def run_pc2p_parallel(network):
+    G = network.copy()
+    edge_cut = PC2P.PC2P_ParallelMultiprocess.Find_CNP(G)
+    # PC2P clusters nodes into connected components by removing edges
+    G_copy = G.copy()
+    G_copy.remove_edges_from(edge_cut)
+    # Save predicted clusters in
+    G_cnp_components = list(nx.connected_components(G_copy))
+    G_cnp_components.sort(key=len, reverse=True)
+    return G_cnp_components
 
 
 # FILE HANDLING
@@ -210,7 +247,7 @@ def read_yhtp2008():
     """
     Read the csv file into a list of sets representing protein clusters verified experimentally.
     """
-    lines = lib.files.read_filelines(lib.files.make_filepath_to_clusters("yhtp2008_cluster.csv"))
+    lines = lib.files.read_filelines(lib.files.make_filepath_to_clusters("validation/yhtp2008_complex.csv"))
     clusters = []
     for line in lines:
         cid, orf, _ = line.split(',')
@@ -218,6 +255,18 @@ def read_yhtp2008():
         if cid:
             clusters.append(set())
         clusters[-1].add(orf)
+    return clusters
+
+
+def read_cyc2008():
+    lines = lib.files.read_filelines(lib.files.make_filepath_to_clusters("validation/CYC2008_complexes.txt"))
+    clusters = [line.split(' ') for line in lines]
+    return clusters
+
+
+def read_sgd():
+    lines = lib.files.read_filelines(lib.files.make_filepath_to_clusters("validation/SGD_complexes.txt"))
+    clusters = [line.split(' ') for line in lines]
     return clusters
 
 
@@ -252,22 +301,16 @@ def generate_dataframe(network, clusters):
     :param clusters: List of nodes belonging to each cluster.
     :return: pandas Dataframe
     """
-    
+
     # billy_metric = []
 
     # The features to be generated.
     ids = []
     size = []
-    icp55_shorpl = []
-    pim1_shorpl = []
-    # avg_icp55_shorpl = []
-    # avg_pim1_shorpl = []
-    # std_icp55_shorpl = []
-    # std_pim1_shorpl = []
+    icp55_shell = []
+    pim1_shell = []
     avg_clust_coeff = []
-    avg_deg = []
-    avg_inner_deg = []
-    avg_outer_deg = []
+    is_connected = []
 
     # These are used several times and stored as a variable.
     icp55_shortest_paths = nx.shortest_path_length(network, lib.constants.ICP55)
@@ -275,31 +318,18 @@ def generate_dataframe(network, clusters):
 
     # Add the data
     for id, cluster in enumerate(clusters):
-        
-        # billy_metric.append(calculate_metric())
-        
-        
         # Save the cluster as a subgraph to apply networkx algorithms.
         cluster = network.subgraph(cluster)
         # Save values as lists to reuse below.
         cluster_icp55_shortest_paths = list((icp55_shortest_paths[node] for node in cluster))
         cluster_pim1_shortest_paths = list((pim1_shortest_paths[node] for node in cluster))
-        degrees = list((network.degree()[node] for node in cluster))
-        degrees_within_cluster = list((cluster.degree()[node] for node in cluster))
-        degrees_out_of_cluster = [network_deg - cluster_deg for (network_deg, cluster_deg) in zip(degrees, degrees_within_cluster)]
         # Create records
         ids.append(id)
         size.append(len(cluster))
-        icp55_shorpl.append(min(cluster_icp55_shortest_paths))
-        pim1_shorpl.append(min(cluster_pim1_shortest_paths))
-        # avg_icp55_shorpl.append(np.mean(cluster_icp55_shortest_paths))
-        # avg_pim1_shorpl.append(np.mean(cluster_pim1_shortest_paths))
-        # std_icp55_shorpl.append(np.std(cluster_icp55_shortest_paths))
-        # std_pim1_shorpl.append(np.std(cluster_pim1_shortest_paths))
+        icp55_shell.append(min(cluster_icp55_shortest_paths))
+        pim1_shell.append(min(cluster_pim1_shortest_paths))
         avg_clust_coeff.append(nx.average_clustering(cluster))
-        avg_deg.append(np.mean(degrees))
-        avg_inner_deg.append(np.mean(degrees_within_cluster))
-        avg_outer_deg.append(np.mean(degrees_out_of_cluster))
+        is_connected.append(nx.is_connected(cluster))
 
     # Return a dataframe of the records.
     # Make sure the names match the data in order.
@@ -308,31 +338,18 @@ def generate_dataframe(network, clusters):
             # billy_metric,
             ids,
             size,
-            icp55_shorpl,
-            # avg_icp55_shorpl,
-            # std_icp55_shorpl,
-            pim1_shorpl,
-            # avg_pim1_shorpl,
-            # std_pim1_shorpl,
+            icp55_shell,
+            pim1_shell,
             avg_clust_coeff,
-            avg_deg,
-            avg_inner_deg,
-            avg_outer_deg
+            is_connected
         )),
         columns=[
-            # 'Bilbo',
             'cluster',
             'size',
-            'icp55_shorpl',
-            # 'icp55_shorpl_mean',
-            # 'icp55_shorpl_std',
-            'pim1_shorpl',
-            # 'pim1_shorpl_mean',
-            # 'pim1_shorpl_std',
+            'icp55_shell',
+            'pim1_shell',
             'avg_clust_coeff',
-            'avg_deg',
-            'avg_inner_deg',
-            'avg_outer_deg'
+            'is_connected'
         ]
     )
 
@@ -340,4 +357,3 @@ def generate_dataframe(network, clusters):
 def generate_and_save_dataframe(network, clusters, filepath):
     df = generate_dataframe(network, clusters)
     df.to_csv(filepath)
-
