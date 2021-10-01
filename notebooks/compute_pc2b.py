@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     df_filepath = lib.files.make_filepath_to_clusters(f"{network_name}.pc2p.global.csv")
     # df = pd.read_csv(df_filepath)
-    df.to_csv(df_filepath)
+    df2.to_csv(df_filepath)
     # df3 = pd.concat([df, df2], ignore_index=True)
     #
     # df3_filepath = lib.files.make_filepath_to_clusters(f"{network_name}.mcl.global.concat.csv")
