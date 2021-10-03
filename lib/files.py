@@ -17,6 +17,11 @@ PATH_TO_CLUSTERS = f"{PATH_TO_DATA}/clusters"
 PATH_TO_MCL_CLUSTERS = f"{PATH_TO_CLUSTERS}/mcl"
 PATH_TO_TABLES = f"{PATH_TO_DATA}/tables"
 
+def make_network_filename(network_name):
+    return f"{network_name}.txt"
+
+def make_clusters_filename(network_name, clusters_name):
+    return f"{network_name}.{clusters_name}.csv"
 
 def make_filepath_to_data(file_name):
     return f"{PATH_TO_DATA}/{file_name}"
@@ -38,7 +43,7 @@ def make_filepath_to_mcl_clusters(file_name):
     return f"{PATH_TO_MCL_CLUSTERS}/{file_name}"
 
 
-def path_to_tables(file_name):
+def make_path_to_dataframes(file_name):
     return f"{PATH_TO_TABLES}/{file_name}"
 
 

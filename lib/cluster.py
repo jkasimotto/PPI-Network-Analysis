@@ -239,7 +239,7 @@ def read_csv(filepath, as_df=False):
     for cid, orf in list(zip(df['cluster'], df['protein'])):
         if cid == len(clusters):
             clusters.append([])
-        clusters[-1].append(orf)
+        clusters[-1].append(str(orf))
     return clusters
 
 
