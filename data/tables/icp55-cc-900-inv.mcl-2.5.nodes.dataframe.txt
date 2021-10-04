@@ -1,0 +1,22 @@
+The dataframe has the following columns:
+
+- protein: Systematic name of the protein (without STRINGS 4932. appended)
+- degree:
+- inviable: 1 if protein is inviable otherwise 0
+- icp55_shell: the shortest_path_length to icp55
+- pim1_shell: the shortest_path_length to pim1
+- betweeness:
+- eigenvector:
+- closeness:
+- bridging:
+- cluster_id:
+- cluster_size
+- cluster_degree: the degree of the protein within the cluster
+- cluster_eigenvector:
+- cluster_closenss:
+- cluster
+- min-shell: min(icp55_shell, pim1_shell)
+- betweeness/min-shell:
+- eigenvector/min-shell:
+- closeness/min-shell:
+- bridging/min-shell:
