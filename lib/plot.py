@@ -14,8 +14,8 @@ import lib.graph
 
 def generate_n_colours(n):
     # Using HSV to RGB
-    hues = np.linspace(0, 1, n)
-    return [colorsys.hsv_to_rgb(hue, 1, 1) for hue in hues]
+    hues = np.linspace(0, 1, n + 1)
+    return [colorsys.hsv_to_rgb(hue, 1, 1) for hue in hues][:-1]
     # Generating permutations of RGB colours.
     # num = math.ceil(math.pow(n, (1 / 3)))
     # colours = [x for x in itertools.product(np.linspace(0, 1, num), repeat=3)]
@@ -140,10 +140,20 @@ def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_di
     cluster_layers = [network.subgraph(clusters[idx]) for idx in unique_clusters]
 
     # This creates a base layer of a neighbourhood around icp55 and pim1 to show the links
-    base_layer = network.subgraph(
-        list(lib.graph.get_neighbourhood(network, lib.constants.ICP55, neighbourhood_dist).nodes())
-        # list(lib.graph.get_neighbourhood(network, lib.constants.PIM1, neighbourhood_dist).nodes())
-    )
+
+    # This creates a base layer of nodes in the shortest paths between ICP55, PIM1 and targets.
+    base_layer_1 = list(itertools.chain.from_iterable([nx.shortest_path(network, lib.constants.ICP55, target) for target in targets]))
+    base_layer_2 = list(itertools.chain.from_iterable([nx.shortest_path(network, lib.constants.PIM1, target) for target in targets]))
+    base_layer_3 = list(itertools.chain.from_iterable(itertools.chain.from_iterable(
+        [nx.shortest_path(network, target1, target2) for target1 in targets] for target2 in targets
+    )))
+    base_layer = network.subgraph(base_layer_1 + base_layer_2 + base_layer_3)
+
+    # This creates a base layer of nodes in the 2-shell around ICP55/PIM1
+    # base_layer = network.subgraph(
+    #     list(lib.graph.get_neighbourhood(network, lib.constants.ICP55, neighbourhood_dist).nodes())
+    #     # list(lib.graph.get_neighbourhood(network, lib.constants.PIM1, neighbourhood_dist).nodes())
+    # )
 
     # We will colour icp55 and pim1 pink with large nodes and labels
     top_layer_kwargs = {
@@ -173,7 +183,7 @@ def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_di
     base_layer_kwargs = {
         'graph': base_layer,
         'node_color': 'black',
-        'node_size': 1,
+        'node_size': 10,
     }
 
     # Now we want to plot the corresponding layers in the following order:
