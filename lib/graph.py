@@ -24,11 +24,10 @@ def read_inviable_proteins(as_graph=False):
     lines = list(filter(None, lines))  # Remove empty lines
     lines = [line.split(',') for line in lines]  # Split into SGD, systemic name, common name, _, _
     systemic_names = [line[1].replace('"', '') for line in lines]
-    nodes = [f"4932.{name}" for name in systemic_names]  # Add organism name to systemic name to match STRING
     if as_graph:
-        return make_from_nodes(nodes)  # Return systemic name
+        return make_from_nodes(systemic_names)  # Return systemic name
     else:
-        return nodes
+        return systemic_names
 
 
 def write_weighted_edgelist(network, filepath):

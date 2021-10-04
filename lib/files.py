@@ -23,6 +23,9 @@ def make_network_filename(network_name):
 def make_clusters_filename(network_name, clusters_name):
     return f"{network_name}.{clusters_name}.csv"
 
+def make_node_dataframe_filename(network_name, clusters_name):
+    return f"{network_name}.{clusters_name}.nodes.dataframe.csv"
+
 def make_filepath_to_data(file_name):
     return f"{PATH_TO_DATA}/{file_name}"
 
