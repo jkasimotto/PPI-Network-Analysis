@@ -136,6 +136,7 @@ def get_largest_connected_component(graph):
 
 
 def get_neighbourhood(graph, node, path_length=1, frozen=True):
+    # TODO: Change this to use the DataFrame data to avoid calculating everytime.
     nodes = [node, *get_nodes_m_or_less_away(graph, node, path_length)]
     return graph.subgraph(nodes)
 

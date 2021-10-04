@@ -1,12 +1,14 @@
 import colorsys
 import itertools
 import math
-import random
 
 import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
 
+import lib.cluster
+import lib.constants
+import lib.files
 import lib.graph
 
 
@@ -71,7 +73,7 @@ def bar(x, y, title, xlabel, ylabel, width=None, density=False, title_size=20, x
     plt.show()
 
 
-def network_layers(network, subgraph_args, base=None, ax=None):
+def network_layers(network, subgraph_kwargs, base=None, ax=None):
     # TODO: Introduce node_size into subgraph_KWargs to make icp55 clusters larger.
     """
 
@@ -79,16 +81,14 @@ def network_layers(network, subgraph_args, base=None, ax=None):
     :param base: The base graph such that only subgraphs of will be plotted.
     :return:
     """
-    # So far the only arguments catered for are node_colors
-    subgraphs, colours = list(zip(*subgraph_args))
 
-    # We only plot nodes on top of the base.
+    # If no base is provided we take the subgraph of all desired nodes AND a neighbourhood of 2 around them so we can
+    # see their connections.
     if base is None:
+        subgraphs = [kwarg['graph'] for kwarg in subgraph_kwargs]
         base = network.subgraph(itertools.chain.from_iterable(
             subgraph.nodes() for subgraph in subgraphs
         ))
-    else:
-        subgraphs = [lib.graph.make_from_intersection([base, subgraph]) for subgraph in subgraphs]
 
     pos = nx.spring_layout(base)
     # pos = nx.random_layout(base)
@@ -97,8 +97,96 @@ def network_layers(network, subgraph_args, base=None, ax=None):
     # pos = nx.planar_layout(base)
     # pos = nx.bipartite_layout(base)
 
-    nx.draw(base, pos=pos, node_color="black", ax=ax)
-    for i in range(len(subgraphs)):
-        subgraph = subgraphs[i]
-        colour = colours[i]
-        nx.draw(subgraph, pos=pos, node_color=colour, ax=ax)
+    nx.draw(base, pos=pos, node_color="black", node_size=1, ax=ax)
+    for kwarg in subgraph_kwargs:
+        graph = kwarg['graph']
+        kwarg = {k:v for (k,v) in kwarg.items() if k != 'graph'} # Remove the graph kwarg before pasing to nx.draw.
+        nx.draw(
+            graph,
+            pos=pos,
+            **kwarg
+        )
+
+
+def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_dist=2):
+    """
+    This function plots a target protein within it's cluster in relation to ICP55 and PIM1
+    :param network_name: The name of the network we are in
+    :param clusters_name: The name of the clusters we are in
+    :param targets: A list of proteins we are targeting
+    :return:
+    """
+    network_filename = lib.files.make_network_filename(network_name)
+    network_filepath = lib.files.make_filepath_to_networks(network_filename)
+    network = lib.graph.read_weighted_edgelist(network_filepath)
+
+    clusters_filename = lib.files.make_clusters_filename(network_name, clusters_name)
+    clusters_filepath = lib.files.make_filepath_to_clusters(clusters_filename)
+    clusters = lib.cluster.read_csv(clusters_filepath)
+
+    # This is our subgraph layer of icp55 and pim1
+    top_layer = network.subgraph([lib.constants.ICP55, lib.constants.PIM1])
+
+    # This is our layer of target proteins.
+    # I create a subgraph for each one because we want the target layers to have the same colour as their cluster
+    target_layers = [network.subgraph([target]) for target in targets]
+
+    # This gets a list of all the "cluster-ids" aka indexes we will need.
+    all_clusters = [lib.cluster.cluster_idxs_with_protein(clusters, target)[0] for target in targets]
+    # There may be targets in the same cluster so I create a set of unique cluster indexes here.
+    # This is used to assign each target the same colour as it's cluster.
+    unique_clusters = list(set(all_clusters))
+    # This creates a subgraph layer for each cluster we will plot.
+    cluster_layers = [network.subgraph(clusters[idx]) for idx in unique_clusters]
+
+    # This creates a base layer of a neighbourhood around icp55 and pim1 to show the links
+    base_layer = network.subgraph(
+        list(lib.graph.get_neighbourhood(network, lib.constants.ICP55, neighbourhood_dist).nodes())
+        # list(lib.graph.get_neighbourhood(network, lib.constants.PIM1, neighbourhood_dist).nodes())
+    )
+
+    # We will colour icp55 and pim1 pink with large nodes and labels
+    top_layer_kwargs = {
+        'graph': top_layer,
+        'node_color': 'pink',
+        'node_size': 200,
+        'with_labels': True
+    }
+
+    # We will give each cluster a visibly separate colour.
+    colours = generate_n_colours(len(cluster_layers))
+    cluster_layer_kwargs = [{
+       'graph': cluster,
+       'node_color': colours[i],
+       'node_size': 20
+    } for i, cluster in enumerate(cluster_layers)]
+
+    # This lambda function get's the index of our target's cluster to get the same colour.
+    get_target_colour = lambda i: unique_clusters.index(all_clusters[i])
+    target_layer_kwargs = [{
+        'graph': target,
+        'node_color': colours[get_target_colour(i)],
+        'node_size': 200,
+        'with_labels': True
+    } for i, target in enumerate(target_layers)]
+
+    base_layer_kwargs = {
+        'graph': base_layer,
+        'node_color': 'black',
+        'node_size': 1,
+    }
+
+    # Now we want to plot the corresponding layers in the following order:
+    # Base
+    # Clusters
+    # Targets
+    # Top layer
+    network_layers(network,
+                   [base_layer_kwargs,
+                    *cluster_layer_kwargs,
+                    *target_layer_kwargs,
+                    top_layer_kwargs])
+
+
+
+
