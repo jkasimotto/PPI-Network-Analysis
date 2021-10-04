@@ -25,7 +25,12 @@ def node_dataframe(
         _cluster_size=False,
         _cluster_degree=False,
         _cluster_eigenvector=False,
-        _cluster_closeness=False
+        _cluster_closeness=False,
+        _min_shell=False,
+        _betweenness_min_shell=False,
+        _closeness_min_shell=False,
+        _bridging_min_shell=False,
+        _eigenvector_min_shell=False
 ):
     """
 
@@ -187,3 +192,20 @@ def add_dataframe_columns(filepath, columns, on=None):
 
     # Write to the filepath
     df3.to_csv(filepath)
+
+
+def add_min_shell(filepath):
+    """df must have icp55_shell and pim1_shell"""
+    df = pd.read_csv(filepath, header=0, index_col=0)
+    assert "icp55_shell" in df.columns and "pim1_shell" in df.columns
+    df['min-shell'] = df['icp55_shell'].combine(df['pim1_shell'], min, 0)
+    df.to_csv(filepath)
+
+
+def add_min_shell_weighted_centralities(filepath):
+    df = pd.read_csv(filepath, header=0, index_col=0)
+    df['betweenness/min-shell'] = df['betweenness'] / df['min-shell']
+    df['closeness/min-shell'] = df['closeness'] / df['min-shell']
+    df['eigenvector/min-shell'] = df['eigenvector'] / df['min-shell']
+    df['bridging/min-shell'] = df['bridging'] / df['min-shell']
+    df.to_csv(filepath)
