@@ -108,12 +108,15 @@ def network_layers(network, subgraph_kwargs, base=None, ax=None):
         )
 
 
-def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_dist=2):
+def targets_with_clusters(network_name, clusters_name, targets, ax=None, top_size=200, target_size=200):
     """
     This function plots a target protein within it's cluster in relation to ICP55 and PIM1
     :param network_name: The name of the network we are in
     :param clusters_name: The name of the clusters we are in
     :param targets: A list of proteins we are targeting
+    :param ax: An axis to plot on if you wish.
+    :param top_size: Size of ICP55 / PIM1 nodes
+    :param target_size: Size of target proteins.
     :return:
     """
     network_filename = lib.files.make_network_filename(network_name)
@@ -159,7 +162,7 @@ def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_di
     top_layer_kwargs = {
         'graph': top_layer,
         'node_color': 'pink',
-        'node_size': 200,
+        'node_size': top_size,
         'with_labels': True
     }
 
@@ -168,7 +171,7 @@ def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_di
     cluster_layer_kwargs = [{
        'graph': cluster,
        'node_color': colours[i],
-       'node_size': 20
+       'node_size': 10
     } for i, cluster in enumerate(cluster_layers)]
 
     # This lambda function get's the index of our target's cluster to get the same colour.
@@ -176,7 +179,7 @@ def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_di
     target_layer_kwargs = [{
         'graph': target,
         'node_color': colours[get_target_colour(i)],
-        'node_size': 200,
+        'node_size': target_size,
         'with_labels': True
     } for i, target in enumerate(target_layers)]
 
@@ -195,7 +198,8 @@ def targets_with_clusters(network_name, clusters_name, targets, neighbourhood_di
                    [base_layer_kwargs,
                     *cluster_layer_kwargs,
                     *target_layer_kwargs,
-                    top_layer_kwargs])
+                    top_layer_kwargs],
+                   ax=ax)
 
 
 
