@@ -3,6 +3,7 @@ from os.path import exists
 import networkx as nx
 import pandas as pd
 
+import PC2P.Analysis.PredictedClusters_Analysis as pc2p_analysis
 import lib.centrality
 import lib.cluster
 import lib.constants
@@ -26,11 +27,7 @@ def node_dataframe(
         _cluster_degree=False,
         _cluster_eigenvector=False,
         _cluster_closeness=False,
-        _min_shell=False,
-        _betweenness_min_shell=False,
-        _closeness_min_shell=False,
-        _bridging_min_shell=False,
-        _eigenvector_min_shell=False
+        _cluster_betweenness=False
 ):
     """
 
@@ -72,6 +69,7 @@ def node_dataframe(
         'cluster_degree': [],
         'cluster_eigenvector': [],
         'cluster_closeness': [],
+        'cluster_betweenness': []
     }
 
     # Prepare data for algorithms.
@@ -113,6 +111,9 @@ def node_dataframe(
     if _cluster_eigenvector:
         print("Computing eigenvector in cluster")
         cluster_eigenvector = [nx.eigenvector_centrality(cluster) for cluster in clusters]
+    if _cluster_betweenness:
+        print("Computing betweenness in cluster")
+        cluster_betweenness = [nx.betweenness_centrality(cluster) for cluster in clusters]
 
     # Iterate over cluster_ids (it's index) and clusters
     #   Since clusters form a partition of the network we therefore iterate over every node exactly once.
@@ -146,6 +147,8 @@ def node_dataframe(
                 columns['cluster_closeness'].append(cluster_closeness[cluster_id][node])
             if _cluster_eigenvector:
                 columns['cluster_eigenvector'].append(cluster_eigenvector[cluster_id][node])
+            if _cluster_betweenness:
+                columns['cluster_betweenness'].append(cluster_betweenness[cluster_id][node])
 
     # Remove empty columns
     columns = {k: v for (k, v) in columns.items() if v != []}
@@ -155,6 +158,68 @@ def node_dataframe(
     filename = f"{network_name}.{clusters_name}.nodes.dataframe.csv"
     filepath = lib.files.make_path_to_dataframes(filename)
     add_dataframe_columns(filepath, columns, on=['protein'])
+
+
+def cluster_dataframe(network_name, clusters_name):
+    # These are all the columns
+    columns = {
+        'id': [],
+        'size': [],
+        'icp55_shell': [],
+        'pim1_shell': [],
+        'percent_connected': [],
+        'modularity': [],
+        'sensitivity_yhtp': [],
+        'positive_predicted_value_yhtp': [],
+        'accuracy_yhtp': [],
+        'fraction_matched_yhtp': [],
+        'separation_yhtp': [],
+        'precision_yhtp': [],
+        'recall_yhtp': [],
+        'f_measure_yhtp': [],
+        'sensitivity_sgd': [],
+        'positive_predicted_value_sgd': [],
+        'accuracy_sgd': [],
+        'fraction_matched_sgd': [],
+        'separation_sgd': [],
+        'precision_sgd': [],
+        'recall_sgd': [],
+        'f_measure_sgd': []
+    }
+
+    network = lib.graph.read_network(network_name)
+
+    clusters = lib.cluster.read_clusters(network_name, clusters_name)
+
+    # Validated complexes
+    yhtp2008 = lib.cluster.read_yhtp2008()
+    sgd = lib.cluster.read_sgd()
+
+    columns['percent_connected'].append(len(
+        [cluster for cluster in clusters if nx.is_connected(network.subgraph(cluster))]
+    ) / len(clusters))
+
+    columns['sensitivity_yhtp'].append(pc2p_analysis.clusteringwise_sensitivity(yhtp2008, clusters))
+    columns['positive_predicted_value_yhtp'].append(pc2p_analysis.positive_predictive_value(yhtp2008, clusters))
+    columns['accuracy_yhtp'].append(pc2p_analysis.accuracy(yhtp2008, clusters))
+    columns['fraction_matched_yhtp'].append(pc2p_analysis.fraction_matched(yhtp2008, clusters))
+    columns['separation_yhtp'].append(pc2p_analysis.clusteringwise_separation(yhtp2008, clusters))
+    columns['precision_yhtp'].append(pc2p_analysis.precision_Jaccard(yhtp2008, clusters))
+    columns['recall_yhtp'].append(pc2p_analysis.recall_Jaccard(yhtp2008, clusters))
+    columns['f_measure_yhtp'].append(pc2p_analysis.F_measure_Jaccard(yhtp2008, clusters))
+
+    columns['sensitivity_sgd'].append(pc2p_analysis.clusteringwise_sensitivity(sgd, clusters))
+    columns['positive_predicted_value_sgd'].append(pc2p_analysis.positive_predictive_value(sgd, clusters))
+    columns['accuracy_sgd'].append(pc2p_analysis.accuracy(sgd, clusters))
+    columns['fraction_matched_sgd'].append(pc2p_analysis.fraction_matched(sgd, clusters))
+    columns['separation_sgd'].append(pc2p_analysis.clusteringwise_separation(sgd, clusters))
+    columns['precision_sgd'].append(pc2p_analysis.precision_Jaccard(sgd, clusters))
+    columns['recall_sgd'].append(pc2p_analysis.recall_Jaccard(sgd, clusters))
+    columns['f_measure_sgd'].append(pc2p_analysis.F_measure_Jaccard(sgd, clusters))
+
+    filename = lib.files.make_clusters_dataframe_filename(network_name)
+    filepath = lib.files.make_path_to_dataframes(filename)
+    add_dataframe_rows(filepath, columns)
 
 
 def add_dataframe_columns(filepath, columns, on=None):
@@ -192,6 +257,29 @@ def add_dataframe_columns(filepath, columns, on=None):
 
     # Write to the filepath
     df3.to_csv(filepath)
+
+
+def add_dataframe_rows(filepath, columns):
+    # Create the dataframe.
+    df = pd.DataFrame.from_dict(columns)
+
+    # If no file exists, write to the filepath.
+    if not exists(filepath):
+        df.to_csv(filepath)
+        return
+
+    # Then read the existing file.
+    df2 = pd.read_csv(filepath, index_col=0, header=0)
+    df2 = df2.astype({'protein': str})  # Networks such as karate-club and gnp-100-0.5 use integer node names.
+
+    # Assert we have the same columns
+    assert df.columns == df2.columns
+
+    # Concatenate the new rows to the old rows
+    df3 = pd.concat([df2, df], ignore_index=True)
+
+    df3.to_csv(filepath)
+
 
 
 def add_min_shell(filepath):

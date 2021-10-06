@@ -14,7 +14,8 @@ The dataframe has the following columns:
 - cluster_degree: the degree of the protein within the cluster
 - cluster_eigenvector:
 - cluster_closenss:
-- cluster
+- cluster_betweenness:
+- cluster:
 - min-shell: min(icp55_shell, pim1_shell)
 - betweeness/min-shell:
 - eigenvector/min-shell:

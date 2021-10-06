@@ -7,8 +7,11 @@ import numpy as np
 import lib.files
 
 
-def read_graph(filename):
-    return nx.read_weighted_edgelist(lib.files.make_unzipped_filepath(filename))
+
+def read_network(network_name):
+    network_filename = lib.files.make_network_filename(network_name)
+    network_filepath = lib.files.make_filepath_to_networks(network_filename)
+    return read_weighted_edgelist(network_filepath)
 
 
 def read_STRING():
