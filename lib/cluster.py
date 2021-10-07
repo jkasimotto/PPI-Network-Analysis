@@ -7,8 +7,10 @@ import pandas as pd
 
 import PC2P.PC2P_ParallelMultiprocess
 import PC2P.PC2P_Sequential
+import lib.cluster
 import lib.constants
 import lib.files
+import lib.graph
 
 
 # PROPERTIES
@@ -239,7 +241,7 @@ def read_csv(filepath, as_df=False):
     for cid, orf in list(zip(df['cluster'], df['protein'])):
         if cid == len(clusters):
             clusters.append([])
-        clusters[-1].append(orf)
+        clusters[-1].append(str(orf))
     return clusters
 
 
@@ -279,6 +281,12 @@ def write_to_file(filepath, clusters):
             proteins.append(protein)
     df = pd.DataFrame.from_records(list(zip(cluster_ids, proteins)), columns=['cluster', 'protein'])
     df.to_csv(filepath)
+
+
+def read_clusters(network_name, clusters_name):
+    clusters_filename = lib.files.make_clusters_filename(network_name, clusters_name)
+    clusters_filepath = lib.files.make_filepath_to_clusters(clusters_filename)
+    return read_csv(clusters_filepath)
 
 
 # DATAFRAMES

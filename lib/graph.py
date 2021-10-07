@@ -7,16 +7,19 @@ import numpy as np
 import lib.files
 
 
-def read_graph(filename):
-    return nx.read_weighted_edgelist(lib.files.make_unzipped_filepath(filename))
+
+def read_network(network_name):
+    network_filename = lib.files.make_network_filename(network_name)
+    network_filepath = lib.files.make_filepath_to_networks(network_filename)
+    return read_weighted_edgelist(network_filepath)
 
 
 def read_STRING():
     return nx.read_weighted_edgelist(lib.files.make_filepath_to_networks('4932.protein.links.v11.5.txt'))
 
 
-def read_weighted_edgelist(filepath):
-    return nx.read_weighted_edgelist(filepath)
+def read_weighted_edgelist(filepath, nodetype=str):
+    return nx.read_weighted_edgelist(filepath, nodetype=nodetype)
 
 
 def read_inviable_proteins(as_graph=False):
@@ -24,11 +27,10 @@ def read_inviable_proteins(as_graph=False):
     lines = list(filter(None, lines))  # Remove empty lines
     lines = [line.split(',') for line in lines]  # Split into SGD, systemic name, common name, _, _
     systemic_names = [line[1].replace('"', '') for line in lines]
-    nodes = [f"4932.{name}" for name in systemic_names]  # Add organism name to systemic name to match STRING
     if as_graph:
-        return make_from_nodes(nodes)  # Return systemic name
+        return make_from_nodes(systemic_names)  # Return systemic name
     else:
-        return nodes
+        return systemic_names
 
 
 def write_weighted_edgelist(network, filepath):
@@ -137,6 +139,7 @@ def get_largest_connected_component(graph):
 
 
 def get_neighbourhood(graph, node, path_length=1, frozen=True):
+    # TODO: Change this to use the DataFrame data to avoid calculating everytime.
     nodes = [node, *get_nodes_m_or_less_away(graph, node, path_length)]
     return graph.subgraph(nodes)
 
