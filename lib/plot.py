@@ -10,12 +10,13 @@ import lib.cluster
 import lib.constants
 import lib.files
 import lib.graph
+import lib.map_names
 
 
 def generate_n_colours(n):
     # Using HSV to RGB
-    hues = np.linspace(0, 1, n + 1)
-    return [colorsys.hsv_to_rgb(hue, 1, 1) for hue in hues][:-1]
+    hues = np.linspace(0, 1, n + 2) # Use 2 extra to skip first and last.
+    return [colorsys.hsv_to_rgb(hue, 1, 1) for hue in hues][1:-1]
     # Generating permutations of RGB colours.
     # num = math.ceil(math.pow(n, (1 / 3)))
     # colours = [x for x in itertools.product(np.linspace(0, 1, num), repeat=3)]
@@ -100,7 +101,7 @@ def network_layers(network, subgraph_kwargs, base=None, ax=None):
     nx.draw(base, pos=pos, node_color="black", node_size=1, ax=ax)
     for kwarg in subgraph_kwargs:
         graph = kwarg['graph']
-        kwarg = {k:v for (k,v) in kwarg.items() if k != 'graph'} # Remove the graph kwarg before pasing to nx.draw.
+        kwarg = {k: v for (k, v) in kwarg.items() if k != 'graph'}  # Remove the graph kwarg before pasing to nx.draw.
         nx.draw(
             graph,
             pos=pos,
@@ -108,15 +109,20 @@ def network_layers(network, subgraph_kwargs, base=None, ax=None):
         )
 
 
-def targets_with_clusters(network_name, clusters_name, targets, ax=None, top_size=200, target_size=200):
+def targets_with_clusters(network_name, clusters_name, targets, all_shorps=False, top_size=200, target_size=200,
+                          base_size=200, ax=None, top_colour='pink', base_colour='yellow'):
     """
     This function plots a target protein within it's cluster in relation to ICP55 and PIM1
     :param network_name: The name of the network we are in
     :param clusters_name: The name of the clusters we are in
     :param targets: A list of proteins we are targeting
-    :param ax: An axis to plot on if you wish.
+    :param all_shorps: If true, plot all shortest paths between all targets. If False plot shortest paths only from ICP55/PIM1 to targets.
     :param top_size: Size of ICP55 / PIM1 nodes
     :param target_size: Size of target proteins.
+    :param base_size: Base of proteins on the shortest paths. (These appear as squares).
+    :param top_colour: Colour of ICP55 / PIM1.
+    :param base_colour: Colour of proteins on the shortest paths.
+    :param ax: An axis to plot on if you wish.
     :return:
     """
     network_filename = lib.files.make_network_filename(network_name)
@@ -145,12 +151,17 @@ def targets_with_clusters(network_name, clusters_name, targets, ax=None, top_siz
     # This creates a base layer of a neighbourhood around icp55 and pim1 to show the links
 
     # This creates a base layer of nodes in the shortest paths between ICP55, PIM1 and targets.
-    base_layer_1 = list(itertools.chain.from_iterable([nx.shortest_path(network, lib.constants.ICP55, target) for target in targets]))
-    base_layer_2 = list(itertools.chain.from_iterable([nx.shortest_path(network, lib.constants.PIM1, target) for target in targets]))
-    base_layer_3 = list(itertools.chain.from_iterable(itertools.chain.from_iterable(
-        [nx.shortest_path(network, target1, target2) for target1 in targets] for target2 in targets
-    )))
-    base_layer = network.subgraph(base_layer_1 + base_layer_2 + base_layer_3)
+    base_layers = []
+    base_layers += list(nx.shortest_path(network, lib.constants.ICP55, lib.constants.PIM1))
+    base_layers += list(
+        itertools.chain.from_iterable([nx.shortest_path(network, lib.constants.ICP55, target) for target in targets]))
+    base_layers += list(
+        itertools.chain.from_iterable([nx.shortest_path(network, lib.constants.PIM1, target) for target in targets]))
+    if all_shorps:
+        base_layers += list(itertools.chain.from_iterable(itertools.chain.from_iterable(
+            [nx.shortest_path(network, target1, target2) for target1 in targets] for target2 in targets
+        )))
+    base_layer = network.subgraph(base_layers)
 
     # This creates a base layer of nodes in the 2-shell around ICP55/PIM1
     # base_layer = network.subgraph(
@@ -160,8 +171,8 @@ def targets_with_clusters(network_name, clusters_name, targets, ax=None, top_siz
 
     # We will colour icp55 and pim1 pink with large nodes and labels
     top_layer_kwargs = {
-        'graph': top_layer,
-        'node_color': 'pink',
+        'graph': lib.graph.rename_with_gene_names(top_layer),
+        'node_color': top_colour,
         'node_size': top_size,
         'with_labels': True
     }
@@ -169,38 +180,39 @@ def targets_with_clusters(network_name, clusters_name, targets, ax=None, top_siz
     # We will give each cluster a visibly separate colour.
     colours = generate_n_colours(len(cluster_layers))
     cluster_layer_kwargs = [{
-       'graph': cluster,
-       'node_color': colours[i],
-       'node_size': 10
+        'graph': lib.graph.rename_with_gene_names(cluster),
+        'node_color': colours[i],
+        'node_size': 10
     } for i, cluster in enumerate(cluster_layers)]
 
     # This lambda function get's the index of our target's cluster to get the same colour.
     get_target_colour = lambda i: unique_clusters.index(all_clusters[i])
     target_layer_kwargs = [{
-        'graph': target,
+        'graph': lib.graph.rename_with_gene_names(target),
         'node_color': colours[get_target_colour(i)],
         'node_size': target_size,
         'with_labels': True
     } for i, target in enumerate(target_layers)]
 
     base_layer_kwargs = {
-        'graph': base_layer,
-        'node_color': 'black',
-        'node_size': 10,
+        'graph': lib.graph.rename_with_gene_names(base_layer),
+        'node_color': base_colour,
+        'node_size': base_size,
+        'with_labels': True,
+        'node_shape': 's'
     }
+
+    # Because we renamed all the subgraphs we must rename the original network too for the plot function.
+    network_renamed = lib.graph.rename_with_gene_names(network)
 
     # Now we want to plot the corresponding layers in the following order:
     # Base
     # Clusters
     # Targets
     # Top layer
-    network_layers(network,
+    network_layers(network_renamed,
                    [base_layer_kwargs,
                     *cluster_layer_kwargs,
                     *target_layer_kwargs,
                     top_layer_kwargs],
                    ax=ax)
-
-
-
-

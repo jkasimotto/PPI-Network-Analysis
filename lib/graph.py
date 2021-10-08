@@ -5,6 +5,7 @@ import networkx as nx
 import numpy as np
 
 import lib.files
+import lib.map_names
 
 
 
@@ -22,15 +23,14 @@ def read_weighted_edgelist(filepath, nodetype=str):
     return nx.read_weighted_edgelist(filepath, nodetype=nodetype)
 
 
-def read_inviable_proteins(as_graph=False):
+def read_inviable_proteins(with_organism_name=False):
     lines = lib.files.read_filelines(lib.files.make_filepath_to_data('inviable_proteins.csv'))
     lines = list(filter(None, lines))  # Remove empty lines
     lines = [line.split(',') for line in lines]  # Split into SGD, systemic name, common name, _, _
     systemic_names = [line[1].replace('"', '') for line in lines]
-    if as_graph:
-        return make_from_nodes(systemic_names)  # Return systemic name
-    else:
-        return systemic_names
+    if with_organism_name:
+        systemic_names = ['4932.' + name for name in systemic_names] # Add in the organism name when needed.
+    return systemic_names  # Return systemic name
 
 
 def write_weighted_edgelist(network, filepath):
@@ -191,3 +191,10 @@ def get_node_degrees_by_threshold(graph, node, start=700, stop=1000, step=100):
         graph = lib.graph.remove_edges_below_threshold(graph, threshold)
         degrees.append(graph.degree(node))
     return degrees
+
+def rename_with_gene_names(network):
+    network_systematic_names = list(network.nodes())
+    network_gene_names = lib.map_names.map_names_descriptions(network_systematic_names, 'systematic_name_nonumber', 'gene_name')
+    mapping = dict(zip(network_systematic_names, network_gene_names))
+    network = nx.relabel_nodes(network, mapping) # Idaelly better to update in place but can't use frozen graphs then.
+    return network
