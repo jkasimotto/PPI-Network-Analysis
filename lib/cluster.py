@@ -198,7 +198,7 @@ def mcl_systematic_clusters(graph, clusters):
     return systematic_clusters
 
 
- PC2P
+#PC2P
 def run_pc2p(network):
     G = network.copy()
     edge_cut = PC2P.PC2P_Sequential.Find_CNP(G)

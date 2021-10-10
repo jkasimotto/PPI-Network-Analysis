@@ -5,6 +5,7 @@ import math
 import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
+import pandas as pd
 
 import lib.cluster
 import lib.constants
@@ -245,45 +246,58 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
     
     master_df = pd.read_csv(master_df_name)
     
-    #Get proteins in cluster than are within shorp_threshold of icp55
+    
+    ##Get proteins in cluster than are within shorp_threshold
+    
+    #Set ip top_layer_nodes for later
+    top_layer_nodes = []
+    
+    #Icp55
+    icp55_connectors = master_df.loc[(master_df["icp55_shell"] <= shorp_threshold) &
+                                     (master_df["cluster_id"] == cluster_id), "protein"]
+    icp55_connector_paths = []
+    if len(icp55_connectors) == 0:
+        icp55_connector_path_nodes = []
+    else:
+        top_layer_nodes.append(lib.constants.ICP55)
+        
+        for connector in icp55_connectors:
+            icp55_connector_paths.extend(nx.all_shortest_paths(network,
+                                                              lib.constants.ICP55,
+                                                              connector))
+        icp55_connector_path_nodes = list(set(itertools.chain.from_iterable(icp55_connector_paths)))
     
     
-
+    #Pim1
+    pim1_connectors = master_df.loc[(master_df["pim1_shell"] <= shorp_threshold) &
+                                     (master_df["cluster_id"] == cluster_id), "protein"]
+    pim1_connector_paths = []
+    if len(pim1_connectors) == 0:
+        pim1_connector_path_nodes = []
+    else:
+        top_layer_nodes.append(lib.constants.PIM1)
+        
+        for connector in pim1_connectors:
+            pim1_connector_paths.extend(nx.all_shortest_paths(network,
+                                                              lib.constants.PIM1,
+                                                              connector))
+        pim1_connector_path_nodes = list(set(itertools.chain.from_iterable(pim1_connector_paths)))
+        
+    #Combine both
+    connector_path_nodes = list(itertools.chain.from_iterable([icp55_connector_path_nodes,
+                           pim1_connector_path_nodes]))
+    
+    
     # This is our subgraph layer of icp55 and pim1
-    top_layer = network.subgraph([lib.constants.ICP55, lib.constants.PIM1])
-
-    # This is our layer of target proteins.
-    # I create a subgraph for each one because we want the target layers to have the same colour as their cluster
-    target_layers = [network.subgraph([target]) for target in targets]
-
-    # This gets a list of all the "cluster-ids" aka indexes we will need.
-    all_clusters = [lib.cluster.cluster_idxs_with_protein(clusters, target)[0] for target in targets]
-    # There may be targets in the same cluster so I create a set of unique cluster indexes here.
-    # This is used to assign each target the same colour as it's cluster.
-    unique_clusters = list(set(all_clusters))
-    # This creates a subgraph layer for each cluster we will plot.
-    cluster_layers = [network.subgraph(clusters[idx]) for idx in unique_clusters]
-
-    # This creates a base layer of a neighbourhood around icp55 and pim1 to show the links
-
-    # This creates a base layer of nodes in all shortest paths between ICP55, PIM1 and targets.
-    base_layers = []
-    #base_layers += list(itertools.chain.from_iterable(list(nx.all_shortest_paths(network, lib.constants.ICP55, lib.constants.PIM1))))
-    base_layers += list(
-        itertools.chain.from_iterable([itertools.chain.from_iterable(list(nx.all_shortest_paths(network, lib.constants.ICP55, target))) for target in targets]))
-    base_layers += list(
-        itertools.chain.from_iterable([itertools.chain.from_iterable(list(nx.all_shortest_paths(network, lib.constants.PIM1, target))) for target in targets]))
-    if all_shorps:
-        base_layers += list(itertools.chain.from_iterable(itertools.chain.from_iterable(
-            [itertools.chain.from_iterable(list(nx.all_shortest_paths(network, target1, target2))) for target1 in targets] for target2 in targets
-        )))
-    base_layer = network.subgraph(base_layers)
-
-    # This creates a base layer of nodes in the 2-shell around ICP55/PIM1
-    # base_layer = network.subgraph(
-    #     list(lib.graph.get_neighbourhood(network, lib.constants.ICP55, neighbourhood_dist).nodes())
-    #     # list(lib.graph.get_neighbourhood(network, lib.constants.PIM1, neighbourhood_dist).nodes())
-    # )
+    
+    top_layer = network.subgraph(top_layer_nodes)
+    
+    #This is our layer of clusters
+    cluster_layers = [network.subgraph(clusters[cluster_id])]
+    
+    #This is our base layer of connector proteins
+    base_layer = network.subgraph(connector_path_nodes)
+    
 
     # We will colour icp55 and pim1 pink with large nodes and labels
     top_layer_kwargs = {
@@ -300,15 +314,6 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
         'node_color': colours[i],
         'node_size': 10
     } for i, cluster in enumerate(cluster_layers)]
-
-    # This lambda function get's the index of our target's cluster to get the same colour.
-    get_target_colour = lambda i: unique_clusters.index(all_clusters[i])
-    target_layer_kwargs = [{
-        'graph': lib.graph.rename_with_gene_names(target),
-        'node_color': colours[get_target_colour(i)],
-        'node_size': target_size,
-        'with_labels': True
-    } for i, target in enumerate(target_layers)]
 
     base_layer_kwargs = {
         'graph': lib.graph.rename_with_gene_names(base_layer),
@@ -329,6 +334,6 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
     network_layers(network_renamed,
                    [base_layer_kwargs,
                     *cluster_layer_kwargs,
-                    *target_layer_kwargs,
                     top_layer_kwargs],
                    ax=ax)
+                   
