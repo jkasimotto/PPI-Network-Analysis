@@ -221,7 +221,9 @@ def targets_with_clusters(network_name, clusters_name, targets, all_shorps=False
     
 #Plot a given cluster and its shortest paths to icp55/pim1, if within a threshold path length
 def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name, cluster_id, shorp_threshold, all_shorps=False, top_size=200, target_size=200,
-                          base_size=200, ax=None, top_colour='pink', base_colour='yellow'):
+                          base_size=200, ax=None, top_colour='pink', base_colour='yellow',
+                                   save = False,
+                                   save_directory = "..\\data/cluster_validation/clusters_and_shorps/"):
     """
     This function plots a target protein within its cluster in relation to ICP55 and PIM1
     :param network_name: The name of the network we are in
@@ -298,7 +300,12 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
     #This is our base layer of connector proteins
     base_layer = network.subgraph(connector_path_nodes)
     
-
+    #This is a network from combined all
+    all_nodes = list(top_layer.nodes())
+    all_nodes.extend(cluster_layers[0].nodes())
+    all_nodes.extend(base_layer.nodes())
+    all_node_network = network.subgraph(all_nodes)
+    
     # We will colour icp55 and pim1 pink with large nodes and labels
     top_layer_kwargs = {
         'graph': lib.graph.rename_with_gene_names(top_layer),
@@ -331,9 +338,24 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
     # Clusters
     # Targets
     # Top layer
+    f = plt.figure()
+    
     network_layers(network_renamed,
                    [base_layer_kwargs,
                     *cluster_layer_kwargs,
                     top_layer_kwargs],
                    ax=ax)
+    
+    #Save subgraph for input into STRING
+    if save:
+        
+        #Save image
+        f.savefig(save_directory + "cluster" + str(cluster_id) + 'shorps_graph.png')
+        
+        #Save nodes for STRING
+        with open(save_directory + "cluster" + str(cluster_id) + 'shorps_nodes.txt', 'w') as f:
+            for node in list(all_node_network.nodes()):
+                f.write("%s\n" % node)
+ 
+    
                    

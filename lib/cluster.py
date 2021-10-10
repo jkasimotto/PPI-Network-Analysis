@@ -5,8 +5,8 @@ import markov_clustering as mcl
 import networkx as nx
 import pandas as pd
 
-import PC2P.PC2P_ParallelMultiprocess
-import PC2P.PC2P_Sequential
+#import PC2P.PC2P_ParallelMultiprocess
+#import PC2P.PC2P_Sequential
 import lib.cluster
 import lib.constants
 import lib.files
@@ -199,28 +199,28 @@ def mcl_systematic_clusters(graph, clusters):
 
 
 #PC2P
-def run_pc2p(network):
-    G = network.copy()
-    edge_cut = PC2P.PC2P_Sequential.Find_CNP(G)
-    # PC2P clusters nodes into connected components by removing edges
-    G_copy = G.copy()
-    G_copy.remove_edges_from(edge_cut)
-    # Save predicted clusters in
-    G_cnp_components = list(nx.connected_components(G_copy))
-    G_cnp_components.sort(key=len, reverse=True)
-    return G_cnp_components
+#def run_pc2p(network):
+#    G = network.copy()
+#    edge_cut = PC2P.PC2P_Sequential.Find_CNP(G)
+#    # PC2P clusters nodes into connected components by removing edges
+#    G_copy = G.copy()
+#    G_copy.remove_edges_from(edge_cut)
+#    # Save predicted clusters in
+#    G_cnp_components = list(nx.connected_components(G_copy))
+#    G_cnp_components.sort(key=len, reverse=True)
+#    return G_cnp_components
 
 
-def run_pc2p_parallel(network):
-    G = network.copy()
-    edge_cut = PC2P.PC2P_ParallelMultiprocess.Find_CNP(G)
-    # PC2P clusters nodes into connected components by removing edges
-    G_copy = G.copy()
-    G_copy.remove_edges_from(edge_cut)
-    # Save predicted clusters in
-    G_cnp_components = list(nx.connected_components(G_copy))
-    G_cnp_components.sort(key=len, reverse=True)
-    return G_cnp_components
+#def run_pc2p_parallel(network):
+#    G = network.copy()
+#    edge_cut = PC2P.PC2P_ParallelMultiprocess.Find_CNP(G)
+#    # PC2P clusters nodes into connected components by removing edges
+#    G_copy = G.copy()
+#    G_copy.remove_edges_from(edge_cut)
+#    # Save predicted clusters in
+#    G_cnp_components = list(nx.connected_components(G_copy))
+#    G_cnp_components.sort(key=len, reverse=True)
+#    return G_cnp_components
 
 
 # FILE HANDLING
