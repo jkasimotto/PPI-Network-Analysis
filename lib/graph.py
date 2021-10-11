@@ -198,3 +198,32 @@ def rename_with_gene_names(network):
     mapping = dict(zip(network_systematic_names, network_gene_names))
     network = nx.relabel_nodes(network, mapping) # Idaelly better to update in place but can't use frozen graphs then.
     return network
+
+#Turn a path represented as a list of nodes into a list of tuples which are edges
+def path_nodes_to_edges(path_nodes):
+    
+    path_edges = []
+
+    for i in range(len(path_nodes) - 1):
+    
+        edge = (path_nodes[i], path_nodes[i + 1])
+        path_edges.append(edge)
+        
+    return(path_edges)
+
+#Get edge weights from a path represented as a list of nodes
+#Returns 0 if no edge
+def path_nodes_to_edgeweights(path_nodes, network):
+
+    path_edges = lib.graph.path_nodes_to_edges(path_nodes)
+
+    weight_dict = {}
+
+    for edge in path_edges:
+        
+        if edge in network.edges():
+            weight_dict[edge] = network[edge[0]][edge[1]]["weight"]
+        else:
+            weight_dict[edge] = 0
+
+    return(weight_dict)
