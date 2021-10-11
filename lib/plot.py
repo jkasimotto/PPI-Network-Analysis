@@ -6,6 +6,7 @@ import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
+import copy
 
 import lib.cluster
 import lib.constants
@@ -259,7 +260,7 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
                                      (master_df["cluster_id"] == cluster_id), "protein"]
     icp55_connector_paths = []
     if len(icp55_connectors) == 0:
-        icp55_connector_path_nodes = []
+        None
     else:
         top_layer_nodes.append(lib.constants.ICP55)
         
@@ -267,7 +268,6 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
             icp55_connector_paths.extend(nx.all_shortest_paths(network,
                                                               lib.constants.ICP55,
                                                               connector))
-        icp55_connector_path_nodes = list(set(itertools.chain.from_iterable(icp55_connector_paths)))
     
     
     #Pim1
@@ -275,7 +275,7 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
                                      (master_df["cluster_id"] == cluster_id), "protein"]
     pim1_connector_paths = []
     if len(pim1_connectors) == 0:
-        pim1_connector_path_nodes = []
+        None
     else:
         top_layer_nodes.append(lib.constants.PIM1)
         
@@ -283,12 +283,16 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
             pim1_connector_paths.extend(nx.all_shortest_paths(network,
                                                               lib.constants.PIM1,
                                                               connector))
-        pim1_connector_path_nodes = list(set(itertools.chain.from_iterable(pim1_connector_paths)))
         
     #Combine both
-    connector_path_nodes = list(itertools.chain.from_iterable([icp55_connector_path_nodes,
-                           pim1_connector_path_nodes]))
+    connector_paths = copy.deepcopy(icp55_connector_paths)
+    connector_paths.extend(pim1_connector_paths)
+    connector_path_nodes = list(set(list(itertools.chain.from_iterable(connector_paths))))
     
+    
+    ##Edge weights of connector_paths (OBSELETE)
+    #connector_path_weights = [lib.graph.path_nodes_to_edgeweights(path, edge_network) for path in connector_paths]
+    #return(connector_path_weights)
     
     # This is our subgraph layer of icp55 and pim1
     
@@ -356,6 +360,5 @@ def closest_clusters_with_paths_vis(network_name, clusters_name, master_df_name,
         with open(save_directory + "cluster" + str(cluster_id) + 'shorps_nodes.txt', 'w') as f:
             for node in list(all_node_network.nodes()):
                 f.write("%s\n" % node)
- 
     
                    

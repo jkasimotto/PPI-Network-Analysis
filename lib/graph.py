@@ -3,6 +3,7 @@ import functools
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import pandas as pd
 
 import lib.files
 import lib.map_names
@@ -227,3 +228,87 @@ def path_nodes_to_edgeweights(path_nodes, network):
             weight_dict[edge] = 0
 
     return(weight_dict)
+
+
+
+#Finds shortest paths between a cluster and ICP55/PIM1 below a length threshold. Then takes maximum across paths of minimum edge weight within paths
+def closest_clusters_minmax_pathweights(network_name, clusters_name, master_df_name, cluster_id, shorp_threshold, edge_network = False):
+    """
+    This function plots a target protein within its cluster in relation to ICP55 and PIM1
+    :param network_name: The name of the network we are in
+    :param clusters_name: The name of the clusters we are in
+    :param targets: A list of proteins we are targeting
+    :param all_shorps: If true, plot all shortest paths between all targets. If False plot shortest paths only from ICP55/PIM1 to targets.
+    :param top_size: Size of ICP55 / PIM1 nodes
+    :param target_size: Size of target proteins.
+    :param base_size: Base of proteins on the shortest paths. (These appear as squares).
+    :param top_colour: Colour of ICP55 / PIM1.
+    :param base_colour: Colour of proteins on the shortest paths.
+    :param ax: An axis to plot on if you wish.
+    :return:
+    """
+    network_filename = lib.files.make_network_filename(network_name)
+    network_filepath = lib.files.make_filepath_to_networks(network_filename)
+    network = lib.graph.read_weighted_edgelist(network_filepath)
+
+    clusters_filename = lib.files.make_clusters_filename(network_name, clusters_name)
+    clusters_filepath = lib.files.make_filepath_to_clusters(clusters_filename) 
+    clusters = lib.cluster.read_csv(clusters_filepath)
+    
+    master_df = pd.read_csv(master_df_name)
+    
+    
+    ##Get proteins in cluster than are within shorp_threshold
+    
+    #Set ip top_layer_nodes for later
+    top_layer_nodes = []
+    
+    #Icp55
+    icp55_connectors = master_df.loc[(master_df["icp55_shell"] <= shorp_threshold) &
+                                     (master_df["cluster_id"] == cluster_id), "protein"]
+    icp55_connector_paths = []
+    if len(icp55_connectors) == 0:
+        icp55_connector_path_weights = []
+        icp55_connector_path_min_weights = []
+        icp55_connector_path_min_weights_max = 0
+       
+    else:
+        top_layer_nodes.append(lib.constants.ICP55)
+        
+        for connector in icp55_connectors:
+            icp55_connector_paths.extend(nx.all_shortest_paths(network,
+                                                              lib.constants.ICP55,
+                                                              connector))
+        #Get edge weights
+        icp55_connector_path_weights = [path_nodes_to_edgeweights(path, edge_network) for path in icp55_connector_paths]
+        
+        #Get minimum weight within edges
+        icp55_connector_path_min_weights = [min(dic.values()) for dic in icp55_connector_path_weights]
+        icp55_connector_path_min_weights_max = max(icp55_connector_path_min_weights)
+    
+    
+    #Pim1
+    pim1_connectors = master_df.loc[(master_df["pim1_shell"] <= shorp_threshold) &
+                                     (master_df["cluster_id"] == cluster_id), "protein"]
+    pim1_connector_paths = []
+    if len(pim1_connectors) == 0:
+        pim1_connector_path_weights = []
+        pim1_connector_path_min_weights = []
+        pim1_connector_path_min_weights_max = 0
+    else:
+        top_layer_nodes.append(lib.constants.PIM1)
+        
+        for connector in pim1_connectors:
+            pim1_connector_paths.extend(nx.all_shortest_paths(network,
+                                                              lib.constants.PIM1,
+                                                              connector))
+        #Get edge weights
+        pim1_connector_path_weights = [path_nodes_to_edgeweights(path, edge_network) for path in pim1_connector_paths]
+        
+        #Get minimum weight within edges
+        pim1_connector_path_min_weights = [min(dic.values()) for dic in pim1_connector_path_weights]
+        pim1_connector_path_min_weights_max = max(pim1_connector_path_min_weights)
+
+    
+    
+    return([icp55_connector_path_min_weights_max, pim1_connector_path_min_weights_max])
