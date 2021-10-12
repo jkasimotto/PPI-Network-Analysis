@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
+import itertools
 
 import lib.files
 import lib.map_names
@@ -312,3 +313,108 @@ def closest_clusters_minmax_pathweights(network_name, clusters_name, master_df_n
     
     
     return([icp55_connector_path_min_weights_max, pim1_connector_path_min_weights_max])
+
+
+
+#Finds shortest paths between a cluster and ICP55/PIM1 below a length threshold. Then prints paths, flags nodes as essential, and adds recalculated edge weight
+def closest_clusters_path_info(network_name, clusters_name, master_df_name, cluster_id, shorp_threshold, edge_network = False):
+    """
+    This function plots a target protein within its cluster in relation to ICP55 and PIM1
+    :param network_name: The name of the network we are in
+    :param clusters_name: The name of the clusters we are in
+    :param targets: A list of proteins we are targeting
+    :param all_shorps: If true, plot all shortest paths between all targets. If False plot shortest paths only from ICP55/PIM1 to targets.
+    :param top_size: Size of ICP55 / PIM1 nodes
+    :param target_size: Size of target proteins.
+    :param base_size: Base of proteins on the shortest paths. (These appear as squares).
+    :param top_colour: Colour of ICP55 / PIM1.
+    :param base_colour: Colour of proteins on the shortest paths.
+    :param ax: An axis to plot on if you wish.
+    :return:
+    """
+    network_filename = lib.files.make_network_filename(network_name)
+    network_filepath = lib.files.make_filepath_to_networks(network_filename)
+    network = lib.graph.read_weighted_edgelist(network_filepath)
+
+    clusters_filename = lib.files.make_clusters_filename(network_name, clusters_name)
+    clusters_filepath = lib.files.make_filepath_to_clusters(clusters_filename) 
+    clusters = lib.cluster.read_csv(clusters_filepath)
+    
+    master_df = pd.read_csv(master_df_name)
+    
+    
+    ##Get proteins in cluster than are within shorp_threshold
+    
+    #Set ip top_layer_nodes for later
+    top_layer_nodes = []
+    
+    #Icp55
+    icp55_connectors = master_df.loc[(master_df["icp55_shell"] <= shorp_threshold) &
+                                     (master_df["cluster_id"] == cluster_id), "protein"]
+    icp55_connector_paths = []
+    if len(icp55_connectors) == 0:
+        icp55_connector_path_weights = []
+        icp55_connector_path_min_weights = []
+        icp55_connector_path_min_weights_max = 0
+       
+    else:
+        top_layer_nodes.append(lib.constants.ICP55)
+        
+        for connector in icp55_connectors:
+            icp55_connector_paths.extend(nx.all_shortest_paths(network,
+                                                              lib.constants.ICP55,
+                                                              connector))
+    
+    
+    #Pim1
+    pim1_connectors = master_df.loc[(master_df["pim1_shell"] <= shorp_threshold) &
+                                     (master_df["cluster_id"] == cluster_id), "protein"]
+    pim1_connector_paths = []
+    if len(pim1_connectors) == 0:
+        pim1_connector_path_weights = []
+        pim1_connector_path_min_weights = []
+        pim1_connector_path_min_weights_max = 0
+    else:
+        top_layer_nodes.append(lib.constants.PIM1)
+        
+        for connector in pim1_connectors:
+            pim1_connector_paths.extend(nx.all_shortest_paths(network,
+                                                              lib.constants.PIM1,
+                                                              connector))
+
+    #Combine paths
+    connector_paths = pim1_connector_paths + icp55_connector_paths
+    
+ 
+    #Make df with path info
+    #Make df
+    path_df = pd.DataFrame({"protein": itertools.chain.from_iterable([edge + ["space"] for edge in connector_paths]),
+                           "gene": itertools.chain.from_iterable([lib.map_names.map_names_descriptions(edge,
+                                  "systematic_name_nonumber",
+                                   "gene_name") + ["space"] for edge in connector_paths])})
+
+    #Get edge weight
+    path_df["weight"] = 0
+    path_df["inviable"] = 0
+    path_df["degree"] = 0
+
+    for i in range(len(path_df.index) - 1):
+
+        protein = path_df.loc[path_df.index[i], "protein"]
+
+        if protein in list(master_df["protein"]):
+
+            edge = (protein,
+                   path_df.loc[path_df.index[i + 1], "protein"])
+
+            if edge in edge_network.edges():
+                path_df.loc[path_df.index[i], "weight"] = edge_network[edge[0]][edge[1]]["weight"]
+
+            #Get inviability and degree
+            path_df.loc[path_df.index[i], "inviable"] = int(master_df.loc[master_df["protein"] == protein, "inviable"])
+            path_df.loc[path_df.index[i], "degree"] = int(master_df.loc[master_df["protein"] == protein, "degree"])
+
+    
+    
+    return(path_df)
+   
