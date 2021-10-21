@@ -418,3 +418,27 @@ def closest_clusters_path_info(network_name, clusters_name, master_df_name, clus
     
     return(path_df)
    
+
+def get_n_neighbours_and_clusters(protein, shell_n, save = True, save_directory = ""):
+    """
+    This function returns a list of the nth shell of a protein (inclusive of previous shells), and any clusters of size >= 5 in those shells
+    :param protein: The protein you are interested in
+    :param shell_n: The desired shell
+    :save: Saves as .txt, one protein per line
+    :save_directory: Directory to save in
+    :return:
+    """
+    shell_n_neighbours = list(lib.graph.get_neighbourhood(network, protein, path_length=shell_n, frozen=True).nodes())
+
+    shell_n_clusters = list(set([int(master_df.loc[master_df["protein"] == protein, "cluster_id"]) for protein in shell_n_neighbours if int(master_df.loc[master_df["protein"] == protein, "cluster_size"]) >= 5]))
+
+    shell_n_all = shell_n_neighbours + list(master_df.loc[[master_df.loc[index, "cluster_id"] in shell_n_clusters for index in master_df.index], "protein"])
+    
+    if save:
+        with open(save_directory + protein + "_" + str(shell_n_all) + '_shell_and_clusters.txt', 'w') as f:
+            for node in shell_n_all:
+                f.write("%s\n" % node)
+        return(shell_n_all)
+    else:
+        return(shell_n_all)
+    

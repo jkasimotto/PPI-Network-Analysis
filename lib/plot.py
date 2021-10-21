@@ -112,7 +112,8 @@ def network_layers(network, subgraph_kwargs, base=None, ax=None):
 
 
 def targets_with_clusters(network_name, clusters_name, targets, all_shorps=False, top_size=200, target_size=200,
-                          base_size=200, ax=None, top_colour='pink', base_colour='yellow'):
+                          base_size=200, ax=None, top_colour='pink', base_colour='yellow', label_nodes = True,
+                         base_shape = "s", plot_targets = True):
     """
     This function plots a target protein within its cluster in relation to ICP55 and PIM1
     :param network_name: The name of the network we are in
@@ -176,7 +177,7 @@ def targets_with_clusters(network_name, clusters_name, targets, all_shorps=False
         'graph': lib.graph.rename_with_gene_names(top_layer),
         'node_color': top_colour,
         'node_size': top_size,
-        'with_labels': True
+        'with_labels': label_nodes
     }
 
     # We will give each cluster a visibly separate colour.
@@ -193,15 +194,15 @@ def targets_with_clusters(network_name, clusters_name, targets, all_shorps=False
         'graph': lib.graph.rename_with_gene_names(target),
         'node_color': colours[get_target_colour(i)],
         'node_size': target_size,
-        'with_labels': True
+        'with_labels': label_nodes
     } for i, target in enumerate(target_layers)]
 
     base_layer_kwargs = {
         'graph': lib.graph.rename_with_gene_names(base_layer),
         'node_color': base_colour,
         'node_size': base_size,
-        'with_labels': True,
-        'node_shape': 's'
+        'with_labels': label_nodes,
+        'node_shape': base_shape
     }
 
     # Because we renamed all the subgraphs we must rename the original network too for the plot function.
@@ -212,12 +213,19 @@ def targets_with_clusters(network_name, clusters_name, targets, all_shorps=False
     # Clusters
     # Targets
     # Top layer
-    network_layers(network_renamed,
-                   [base_layer_kwargs,
-                    *cluster_layer_kwargs,
-                    *target_layer_kwargs,
-                    top_layer_kwargs],
-                   ax=ax)
+    if (plot_targets):
+        network_layers(network_renamed,
+                       [base_layer_kwargs,
+                        *cluster_layer_kwargs,
+                        *target_layer_kwargs,
+                        top_layer_kwargs],
+                       ax=ax)
+    else:
+        network_layers(network_renamed,
+                       [base_layer_kwargs,
+                        *cluster_layer_kwargs,
+                        top_layer_kwargs],
+                       ax=ax)
     
     
 #Plot a given cluster and its shortest paths to icp55/pim1, if within a threshold path length
