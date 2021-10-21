@@ -419,7 +419,7 @@ def closest_clusters_path_info(network_name, clusters_name, master_df_name, clus
     return(path_df)
    
 
-def get_n_neighbours_and_clusters(protein, shell_n, save = True, save_directory = ""):
+def get_n_neighbours_and_clusters(protein, network, master_df, shell_n, save = True, add_neighbours = False, save_directory = ""):
     """
     This function returns a list of the nth shell of a protein (inclusive of previous shells), and any clusters of size >= 5 in those shells
     :param protein: The protein you are interested in
@@ -434,10 +434,30 @@ def get_n_neighbours_and_clusters(protein, shell_n, save = True, save_directory 
 
     shell_n_all = shell_n_neighbours + list(master_df.loc[[master_df.loc[index, "cluster_id"] in shell_n_clusters for index in master_df.index], "protein"])
     
+    #Make df for colouring
+    shell_n_all_df = master_df[[master_df.loc[index, "protein"] in shell_n_all for index in master_df.index]]
+    colours = []
+    for index in shell_n_all_df.index:
+        if shell_n_all_df.loc[index, "protein"] == protein:
+            colours.append(-1)
+        elif shell_n_all_df.loc[index, "cluster_size"] < 5:
+            colours.append(-2)
+        else:
+            colours.append(shell_n_all_df.loc[index, "cluster_id"])
+            
+    shell_n_all_df["colours"] = colours
+
+    #Add an extra layer of neighbours if desired
+    #if add_neighbours:
+    #    extra_neighbours = [list(network.neighbors(node)) for node in shell_n_all]
+    #    extra_neighbours_unlisted = itertools.chain.from_iterable(extra_neighbours)
+    #    shell_n_all += extra_neighbours_unlisted
+    
     if save:
-        with open(save_directory + protein + "_" + str(shell_n_all) + '_shell_and_clusters.txt', 'w') as f:
+        with open(save_directory + protein + "_" + str(shell_n) + '_shell_and_clusters.txt', 'w') as f:
             for node in shell_n_all:
                 f.write("%s\n" % node)
+        shell_n_all_df.to_csv(save_directory + protein + "_" + str(shell_n) + '_shell_and_clusters_colours.csv', index = False)
         return(shell_n_all)
     else:
         return(shell_n_all)
