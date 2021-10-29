@@ -76,7 +76,7 @@ def bar(x, y, title, xlabel, ylabel, width=None, density=False, title_size=20, x
     plt.show()
 
 
-def network_layers(network, subgraph_kwargs, base=None, ax=None):
+def network_layers(network, subgraph_kwargs, base=None, ax=None, edge_color = "black"):
     # TODO: Introduce node_size into subgraph_KWargs to make icp55 clusters larger.
     """
 
@@ -100,12 +100,13 @@ def network_layers(network, subgraph_kwargs, base=None, ax=None):
     # pos = nx.planar_layout(base)
     # pos = nx.bipartite_layout(base)
 
-    nx.draw(base, pos=pos, node_color="black", node_size=1, ax=ax)
+    nx.draw(base, pos=pos, node_color="black", edge_color = edge_color, node_size=1, ax=ax)
     for kwarg in subgraph_kwargs:
         graph = kwarg['graph']
         kwarg = {k: v for (k, v) in kwarg.items() if k != 'graph'}  # Remove the graph kwarg before pasing to nx.draw.
         nx.draw(
             graph,
+            edge_color = edge_color,
             pos=pos,
             **kwarg
         )
@@ -333,13 +334,15 @@ def targets_with_clusters_PIM1only(network_name, clusters_name, targets, all_sho
                         *cluster_layer_kwargs,
                         *target_layer_kwargs,
                         top_layer_kwargs],
-                       ax=ax)
+                       ax=ax,
+                      edge_color = "#e1e1e1")
     else:
         network_layers(network_renamed,
                        [base_layer_kwargs,
                         *cluster_layer_kwargs,
                         top_layer_kwargs],
-                       ax=ax)
+                       ax=ax,
+                      edge_color = "#e1e1e1")
     
     
 #Plot a given cluster and its shortest paths to icp55/pim1, if within a threshold path length
