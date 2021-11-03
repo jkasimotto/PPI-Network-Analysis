@@ -5,8 +5,8 @@ import markov_clustering as mcl
 import networkx as nx
 import pandas as pd
 
-#import PC2P.PC2P_ParallelMultiprocess
-#import PC2P.PC2P_Sequential
+import PC2P.PC2P_ParallelMultiprocess
+import PC2P.PC2P_Sequential
 import lib.cluster
 import lib.constants
 import lib.files
@@ -173,10 +173,10 @@ class MCLData:
         self.modularity = None
 
 
-def run_mcl(graph, inflation=2):
+def run_mcl(graph, inflation=2, weight=None):
     # Set all the edge weights
     # Convert to sparse matrix to run the algorithm.
-    matrix = nx.to_scipy_sparse_matrix(graph, weight=None)
+    matrix = nx.to_scipy_sparse_matrix(graph, weight=weight)
     result = mcl.run_mcl(matrix, inflation=inflation)
     # These clusters use the sparse representation of a node i.e. an index
     # We want to convert them back to the systematic names of the proteins.
@@ -186,8 +186,8 @@ def run_mcl(graph, inflation=2):
     return MCLData(matrix, result, clusters, clusters_systematic, modularity)
 
 
-def run_mcl_and_write_to_file(graph, filepath, inflation=2):
-    mcl_data = run_mcl(graph, inflation)
+def run_mcl_and_write_to_file(graph, filepath, inflation=2, weight=None):
+    mcl_data = run_mcl(graph, inflation, weight)
     write_to_file(filepath, mcl_data.clusters)
 
 
@@ -198,29 +198,29 @@ def mcl_systematic_clusters(graph, clusters):
     return systematic_clusters
 
 
-#PC2P
-#def run_pc2p(network):
-#    G = network.copy()
-#    edge_cut = PC2P.PC2P_Sequential.Find_CNP(G)
-#    # PC2P clusters nodes into connected components by removing edges
-#    G_copy = G.copy()
-#    G_copy.remove_edges_from(edge_cut)
-#    # Save predicted clusters in
-#    G_cnp_components = list(nx.connected_components(G_copy))
-#    G_cnp_components.sort(key=len, reverse=True)
-#    return G_cnp_components
+# PC2P
+def run_pc2p(network):
+    G = network.copy()
+    edge_cut = PC2P.PC2P_Sequential.Find_CNP(G)
+    # PC2P clusters nodes into connected components by removing edges
+    G_copy = G.copy()
+    G_copy.remove_edges_from(edge_cut)
+    # Save predicted clusters in
+    G_cnp_components = list(nx.connected_components(G_copy))
+    G_cnp_components.sort(key=len, reverse=True)
+    return G_cnp_components
 
 
-#def run_pc2p_parallel(network):
-#    G = network.copy()
-#    edge_cut = PC2P.PC2P_ParallelMultiprocess.Find_CNP(G)
-#    # PC2P clusters nodes into connected components by removing edges
-#    G_copy = G.copy()
-#    G_copy.remove_edges_from(edge_cut)
-#    # Save predicted clusters in
-#    G_cnp_components = list(nx.connected_components(G_copy))
-#    G_cnp_components.sort(key=len, reverse=True)
-#    return G_cnp_components
+def run_pc2p_parallel(network):
+    G = network.copy()
+    edge_cut = PC2P.PC2P_ParallelMultiprocess.Find_CNP(G)
+    # PC2P clusters nodes into connected components by removing edges
+    G_copy = G.copy()
+    G_copy.remove_edges_from(edge_cut)
+    # Save predicted clusters in
+    G_cnp_components = list(nx.connected_components(G_copy))
+    G_cnp_components.sort(key=len, reverse=True)
+    return G_cnp_components
 
 
 # FILE HANDLING
@@ -257,7 +257,7 @@ def read_yhtp2008():
         if cid:
             clusters.append(set())
         clusters[-1].add(orf)
-    return clusters
+    return list(filter(lambda x: len(x) >= 3, clusters))
 
 
 def read_cyc2008():
@@ -269,7 +269,8 @@ def read_cyc2008():
 def read_sgd():
     lines = lib.files.read_filelines(lib.files.make_filepath_to_clusters("validation/SGD_complexes.txt"))
     clusters = [line.split(' ') for line in lines]
-    return clusters
+    clusters = list(map(set, clusters))
+    return list(filter(lambda x: len(x) >= 3, clusters))
 
 
 def write_to_file(filepath, clusters):
